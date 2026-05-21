@@ -779,17 +779,14 @@ let activeFreq = {};
 async function fetchAllRecords(gameKey) {
   if (allDrawsData[gameKey]) return allDrawsData[gameKey]; // cached
 
-  const cfg = GAME_CONFIG[gameKey];
   let records = [];
   let offset = null;
 
   do {
-    let url = `https://api.airtable.com/v0/${BASE_ID}/${cfg.table}?pageSize=100&sort[0][field]=Draw_Date&sort[0][direction]=desc`;
+    let url = `/.netlify/functions/airtable?gameKey=${gameKey}`;
     if (offset) url += `&offset=${offset}`;
 
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` }
-    });
+    const res = await fetch(url);
     const data = await res.json();
     if (data.error) throw new Error(data.error.message);
     records = records.concat(data.records);
