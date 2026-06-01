@@ -110,12 +110,12 @@ exports.handler = async function (event) {
   }
 
   // ── Parse rows → records ───────────────────────────────────
-  // Row 0 is the header. Rows are already in sheet order;
-  // we reverse so most-recent draw comes first (desc), matching
-  // the old Airtable sort behaviour the frontend expects.
+  
+  
+  
 
   const header = rows[0]; // ['Draw_Date','N1','N2','N3','N4','N5','N6','N7','Bonus'] or similar
-  const dataRows = rows.slice(1).reverse();
+  const dataRows = rows.slice(1); // Sheet is newest-first — no reversal needed
 
   const records = dataRows
     .filter(row => row[0]) // skip any blank rows
