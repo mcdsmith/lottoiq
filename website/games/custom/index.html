@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Lottery — LottoIQ</title>
+  <meta name="robots" content="noindex, nofollow"/>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <!-- Memberstack -->
+  <script async
+    data-memberstack-app="app_cmpg8yz3h001h0slnha1cbudp"
+    src="https://static.memberstack.com/scripts/v1/memberstack.js">
+  </script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/tokens.css"/>
+  <link rel="stylesheet" href="/css/base.css"/>
+  <link rel="stylesheet" href="/css/nav.css"/>
+  <link rel="stylesheet" href="/css/game-tabs.css"/>
+  <link rel="stylesheet" href="/css/hero.css"/>
+  <link rel="stylesheet" href="/css/sections.css"/>
+  <link rel="stylesheet" href="/css/heatmap.css"/>
+  <link rel="stylesheet" href="/css/generator.css"/>
+  <link rel="stylesheet" href="/css/draw-table.css"/>
+  <link rel="stylesheet" href="/css/gates.css"/>
+  <link rel="stylesheet" href="/css/responsive.css"/>
+
+  <style>
+    /* ── Upload screen ─────────────────────────────────────── */
+    .upload-screen {
+      max-width: 560px;
+      margin: 48px auto;
+      padding: 0 20px;
+    }
+
+    .upload-title {
+      font-family:   var(--font-display);
+      font-size:     28px;
+      font-weight:   800;
+      letter-spacing:-0.02em;
+      margin-bottom: 10px;
+    }
+
+    .upload-title span { color: var(--gold); }
+
+    .upload-sub {
+      font-size:     14px;
+      color:         var(--text-muted);
+      margin-bottom: 32px;
+      line-height:   1.6;
+    }
+
+    .upload-card {
+      background:    var(--navy-2);
+      border:        1px solid var(--navy-4);
+      border-radius: var(--radius-lg);
+      padding:       28px;
+    }
+
+    .upload-field {
+      margin-bottom: 20px;
+    }
+
+    .upload-field label {
+      display:        block;
+      font-family:    var(--font-mono);
+      font-size:      10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color:          var(--text-muted);
+      margin-bottom:  8px;
+    }
+
+    .upload-field input[type="text"],
+    .upload-field select {
+      width:         100%;
+      background:    var(--navy-3);
+      border:        1px solid var(--navy-4);
+      border-radius: var(--radius);
+      color:         var(--text);
+      font-family:   var(--font-body);
+      font-size:     14px;
+      padding:       10px 14px;
+      outline:       none;
+      box-sizing:    border-box;
+      transition:    border-color 0.15s;
+    }
+
+    .upload-field input[type="text"]:focus,
+    .upload-field select:focus { border-color: var(--gold); }
+
+    .upload-drop {
+      border:        2px dashed var(--navy-4);
+      border-radius: var(--radius);
+      padding:       32px 20px;
+      text-align:    center;
+      cursor:        pointer;
+      transition:    border-color 0.2s, background 0.2s;
+      position:      relative;
+    }
+
+    .upload-drop:hover,
+    .upload-drop.drag-over {
+      border-color: var(--gold);
+      background:   rgba(255,198,0,0.04);
+    }
+
+    .upload-drop input[type="file"] {
+      position: absolute;
+      inset:    0;
+      opacity:  0;
+      cursor:   pointer;
+      width:    100%;
+      height:   100%;
+    }
+
+    .upload-drop-icon { font-size:32px; margin-bottom:10px; }
+
+    .upload-drop-label {
+      font-size:  14px;
+      color:      var(--text-muted);
+      line-height:1.5;
+    }
+
+    .upload-drop-label strong { color: var(--text); }
+
+    .upload-file-chosen {
+      margin-top:  10px;
+      font-size:   13px;
+      font-family: var(--font-mono);
+      color:       var(--gold);
+    }
+
+    .upload-format-note {
+      margin-top:  14px;
+      font-size:   12px;
+      color:       var(--text-dim);
+      line-height: 1.6;
+    }
+
+    .upload-format-note code {
+      background:    var(--navy-3);
+      border-radius: 4px;
+      padding:       1px 6px;
+      font-family:   var(--font-mono);
+      font-size:     11px;
+      color:         var(--gold);
+    }
+
+    /* ── Config confirm card ───────────────────────────────── */
+    .config-card {
+      background:    var(--navy-2);
+      border:        1px solid var(--gold-bd);
+      border-radius: var(--radius-lg);
+      padding:       24px;
+      margin-bottom: 20px;
+    }
+
+    .config-title {
+      font-family:   var(--font-display);
+      font-size:     15px;
+      font-weight:   700;
+      margin-bottom: 14px;
+      color:         var(--gold);
+    }
+
+    .config-grid {
+      display:               grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap:                   14px;
+      margin-bottom:         16px;
+    }
+
+    .config-item label {
+      display:        block;
+      font-family:    var(--font-mono);
+      font-size:      10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color:          var(--text-muted);
+      margin-bottom:  6px;
+    }
+
+    .config-item select,
+    .config-item input[type="number"] {
+      width:         100%;
+      background:    var(--navy-3);
+      border:        1px solid var(--navy-4);
+      border-radius: var(--radius);
+      color:         var(--text);
+      font-family:   var(--font-body);
+      font-size:     13px;
+      padding:       8px 10px;
+      outline:       none;
+      box-sizing:    border-box;
+    }
+
+    .config-detected {
+      font-size:  12px;
+      color:      var(--text-dim);
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    .upload-error {
+      background:    rgba(255,80,80,0.1);
+      border:        1px solid rgba(255,80,80,0.3);
+      border-radius: var(--radius);
+      color:         #ff8080;
+      font-size:     13px;
+      padding:       10px 14px;
+      margin-bottom: 16px;
+      display:       none;
+    }
+
+    .upload-actions { display:flex; gap:10px; flex-wrap:wrap; }
+
+    /* Hide analysis until CSV is loaded */
+    #analysisWrap { display: none; }
+  </style>
+</head>
+<body>
+
+<div id="loadingOverlay" style="display:none">
+  <div class="loading-logo">Lotto<span>IQ</span></div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Analysing your data…</div>
+</div>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="/">Lotto<span>IQ</span>.ca</a>
+    <div class="nav-right">
+      <span class="tier-badge standard">Standard</span>
+      <a class="nav-upgrade" href="/upgrade">Upgrade ↗</a>
+      <div class="nav-avatar">J</div>
+      <button class="nav-logout" id="logoutBtn" aria-label="Log out">Sign out</button>
+    </div>
+  </div>
+</nav>
+
+<div class="game-tabs">
+  <div class="game-tab" data-game="lotto-649">Lotto 6/49</div>
+  <div class="game-tab" data-game="lotto-max">Lotto MAX</div>
+  <div class="game-tab" data-game="lottario">Lottario</div>
+  <div class="game-tab" data-game="ontario-49">Ontario 49</div>
+  <div class="game-tab active" data-game="custom">My Lottery</div>
+</div>
+
+
+<!-- ── UPLOAD SCREEN ─────────────────────────────────────────── -->
+<div id="uploadScreen">
+  <div class="upload-screen">
+
+    <div class="upload-title">Analyse <span>Your Lottery</span></div>
+    <p class="upload-sub">
+      Upload historical draw data from any pick-style lottery.
+      LottoIQ will analyse your data and give you the same frequency insights,
+      heatmaps, and smart number generator as the built-in games.
+    </p>
+
+    <div class="upload-card">
+
+      <div class="upload-error" id="uploadError"></div>
+
+      <!-- Game name -->
+      <div class="upload-field">
+        <label for="customGameName">Game name</label>
+        <input type="text" id="customGameName" placeholder="e.g. Powerball, UK Lotto, My Local Draw" maxlength="40"/>
+      </div>
+
+      <!-- CSV upload -->
+      <div class="upload-field">
+        <label>Upload draw history CSV</label>
+        <div class="upload-drop" id="uploadDrop">
+          <input type="file" id="csvFile" accept=".csv,.txt"/>
+          <div class="upload-drop-icon">📂</div>
+          <div class="upload-drop-label">
+            <strong>Click to browse</strong> or drag &amp; drop your CSV file
+          </div>
+          <div class="upload-file-chosen" id="fileChosen"></div>
+        </div>
+        <div class="upload-format-note">
+          Required columns: <code>N1, N2, N3…</code> (one per ball drawn)<br>
+          Optional columns: <code>Draw_Date</code>, <code>Bonus</code><br>
+          Example: <code>Draw_Date,N1,N2,N3,N4,N5,N6,Bonus</code>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="parseBtn" style="width:100%">Analyse My Data →</button>
+
+    </div><!-- /upload-card -->
+  </div><!-- /upload-screen -->
+</div><!-- /uploadScreen -->
+
+
+<!-- ── CONFIG CONFIRM SCREEN ─────────────────────────────────── -->
+<div id="configScreen" style="display:none">
+  <div class="upload-screen">
+
+    <div class="upload-title">Confirm <span>Game Settings</span></div>
+    <p class="upload-sub">LottoIQ detected the following from your CSV. Adjust if anything looks wrong.</p>
+
+    <div class="upload-error" id="configError"></div>
+
+    <div class="config-card">
+      <div class="config-title" id="configGameTitle">My Lottery</div>
+
+      <div class="config-grid">
+        <div class="config-item">
+          <label>Numbers drawn per draw</label>
+          <input type="number" id="cfgPicks" min="2" max="10" value="6"/>
+          <div class="config-detected" id="cfgPicksDetected"></div>
+        </div>
+        <div class="config-item">
+          <label>Highest ball number</label>
+          <input type="number" id="cfgPool" min="10" max="100" value="49"/>
+          <div class="config-detected" id="cfgPoolDetected"></div>
+        </div>
+        <div class="config-item">
+          <label>Has bonus number?</label>
+          <select id="cfgBonus">
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+        <div class="config-item">
+          <label>Draws found</label>
+          <input type="number" id="cfgDrawCount" disabled/>
+        </div>
+      </div>
+
+      <p class="config-detected" id="cfgDateDetected"></p>
+    </div>
+
+    <div class="upload-actions">
+      <button class="btn-primary" id="confirmBtn">Run Analysis →</button>
+      <button class="btn-secondary" id="backBtn">← Upload different file</button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ── ANALYSIS SECTION ───────────────────────────────────────── -->
+<div id="analysisWrap">
+
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="hero-title-row">
+        <h1 id="heroTitle">My Lottery Statistics &amp; Analysis</h1>
+        <div class="last-updated" id="lastUpdated">Session only</div>
+      </div>
+      <p class="hero-sub" id="heroSub">Based on your uploaded draw data</p>
+      <p class="hero-disclaimer">For entertainment purposes only. Statistics do not predict future draws.</p>
+
+      <div class="stat-strip">
+        <div class="stat-card">
+          <div class="stat-card-label">Total draws<br>recorded</div>
+          <div class="stat-card-value" id="statTotalDraws">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Most recent<br>draw date</div>
+          <div class="stat-card-value" id="statRecentDate" style="font-size:26px;line-height:1.15">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Most frequent<br>number</div>
+          <div class="stat-card-value ball-inline">
+            <span class="ball-sm ball-gold" id="statHotBall">—</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Least frequent<br>number</div>
+          <div class="stat-card-value ball-inline">
+            <span class="ball-sm ball-outline" id="statColdBall">—</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Numbers<br>per draw</div>
+          <div class="stat-card-value" id="statNextDraw" style="font-size:22px;line-height:1.2">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <!-- Dataset selector — all unlocked for custom game -->
+    <div class="dataset-wrap">
+      <div class="dataset-selector">
+        <span class="ds-label">Dataset</span>
+        <button class="ds-btn" data-dataset="alltime">All-time</button>
+        <button class="ds-btn" data-dataset="last90">Last 90</button>
+        <button class="ds-btn active" data-dataset="last30">Last 30 draws</button>
+      </div>
+      <button class="btn-secondary" id="newUploadBtn" style="font-size:12px;padding:6px 12px">↑ Upload new file</button>
+    </div>
+
+    <!-- Heatmap -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Draw frequency heatmap</h2>
+        <span class="section-note">Hover any ball for detail</span>
+      </div>
+      <p class="section-desc" id="heatmapDesc">Every number, shaded by how often it has been drawn.</p>
+      <div class="heatmap-grid" id="heatmapGrid"></div>
+      <div class="hm-legend">
+        <span>Lower frequency</span>
+        <div class="hm-legend-dots"><span class="hm-legend-dot" style="background:#1a2e3b"></span><span class="hm-legend-dot" style="background:#1e4d5c"></span><span class="hm-legend-dot" style="background:#1f6b6e"></span><span class="hm-legend-dot" style="background:#1d8a72"></span><span class="hm-legend-dot" style="background:#3a9e68"></span><span class="hm-legend-dot" style="background:#6aab4e"></span><span class="hm-legend-dot" style="background:#a0b83a"></span><span class="hm-legend-dot" style="background:#d4a020"></span><span class="hm-legend-dot" style="background:#e63c00"></span></div>
+        <span>Higher frequency</span>
+      </div>
+    </div>
+
+    <hr class="section-divider"/>
+
+    <!-- Hot & Cold -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Hot &amp; cold numbers</h2>
+      </div>
+      <p class="section-desc">Hot numbers have appeared most often. Cold numbers have appeared least.</p>
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-title">🔥 Hot right now</div>
+          <div class="panel-sub">Top 6 most drawn</div>
+          <div class="ball-row" id="hotBalls"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">🧊 Cold numbers</div>
+          <div class="panel-sub">Bottom 6 least drawn</div>
+          <div class="ball-row" id="coldBalls"></div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="section-divider"/>
+
+    <!-- Overdue -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Overdue numbers</h2>
+        <span class="section-note">Overdue ≠ due — each draw is independent</span>
+      </div>
+      <p class="section-desc">Tap up to 2 numbers to lock them into your generated pick below.</p>
+      <div class="overdue-grid" id="overdueGrid"></div>
+    </div>
+
+    <hr class="section-divider"/>
+
+    <!-- Pattern stats -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Pattern statistics</h2>
+      </div>
+      <p class="section-desc" id="patternDesc">Typical characteristics of a winning draw.</p>
+      <div class="pattern-grid">
+        <div class="pattern-card"><div class="pattern-label">Average draw sum</div><div class="pattern-value" id="statSum">—</div></div>
+        <div class="pattern-card"><div class="pattern-label">Typical odd / even</div><div class="pattern-value" id="statOddEven">—</div><div class="pattern-sub">Most common breakdown</div></div>
+        <div class="pattern-card"><div class="pattern-label">Typical low / high</div><div class="pattern-value" id="statLowHigh">—</div><div class="pattern-sub" id="statLowHighDetail">—</div></div>
+        <div class="pattern-card"><div class="pattern-label">Consecutive pairs</div><div class="pattern-value" id="statConsec">—</div><div class="pattern-sub">Draws with at least one consecutive pair</div></div>
+      </div>
+    </div>
+
+    <hr class="section-divider"/>
+
+    <!-- Generator -->
+    <div class="section">
+      <div class="generator-wrap">
+        <div class="generator-header">
+          <h2>Number Generator</h2>
+          <p>A filtered random picker weighted by recent draw frequency. Every combination has the same odds — this tool helps you apply your own criteria, not improve your chances.</p>
+        </div>
+        <div class="generator-body">
+
+          <!-- Auto/Manual toggle -->
+          <div class="gen-mode-wrap" id="genModeWrap" style="display:none">
+            <div class="gen-mode-tabs">
+              <div class="gen-mode-tab active" id="genModeAuto">Auto</div>
+              <div class="gen-mode-tab" id="genModeManual">Manual</div>
+            </div>
+          </div>
+
+          <div class="filters-grid">
+
+            <!-- Sum range -->
+            <div class="filter-group">
+              <label for="sumRange">Sum range</label>
+              <select class="filter-select" id="sumRange">
+                <option value="typical" selected>Typical</option>
+                <option value="low">Low</option>
+                <option value="high">High</option>
+              </select>
+              <input type="hidden" id="sumMin" value="0"/>
+              <input type="hidden" id="sumMax" value="999"/>
+              <div class="filter-hint" id="sumHint">Loading…</div>
+            </div>
+
+            <!-- Odd/Even -->
+            <div class="filter-group">
+              <label for="oddEven">Odd / Even balance</label>
+              <select class="filter-select" id="oddEven">
+                <option value="any">Any balance</option>
+              </select>
+              <div class="gen-hint-wrap" id="oddEvenHint"></div>
+            </div>
+
+            <!-- Low/High -->
+            <div class="filter-group">
+              <label for="lowHigh">Low / High balance</label>
+              <select class="filter-select" id="lowHigh">
+                <option value="any">Any balance</option>
+              </select>
+              <div class="gen-hint-wrap" id="lowHighHint"></div>
+            </div>
+
+            <!-- Overdue -->
+            <div class="filter-group">
+              <label for="overdueCount">Include overdue numbers</label>
+              <select class="filter-select" id="overdueCount">
+                <option value="0">None</option>
+                <option value="1">1 overdue number</option>
+                <option value="2">2 overdue numbers</option>
+              </select>
+            </div>
+
+            <!-- Never appeared -->
+            <div class="filter-group" id="neverAppearedGroup">
+              <label>Uniqueness</label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="neverAppeared"/>
+                Never drawn before
+              </label>
+            </div>
+
+            <!-- Spread -->
+            <div class="filter-group" id="spreadFilterGroup">
+              <label for="spreadFilter">Spread</label>
+              <select class="filter-select" id="spreadFilter">
+                <option value="any">Any spread</option>
+                <option value="narrow">Narrow (clustered)</option>
+                <option value="medium">Medium (balanced)</option>
+                <option value="wide">Wide (full range)</option>
+              </select>
+              <div class="gen-hint-wrap" id="spreadHint"></div>
+            </div>
+
+            <!-- Top pair -->
+            <div class="filter-group">
+              <label for="topPair">Include a top pair</label>
+              <select class="filter-select" id="topPair" data-unlocked="true">
+                <option value="none">None (no top pair filter)</option>
+              </select>
+            </div>
+
+            <!-- My Numbers -->
+            <div class="filter-group">
+              <label>My Numbers</label>
+              <div class="my-numbers-wrap">
+                <input type="text" class="filter-text" id="myNumbersInput" placeholder="e.g. 7, 14" maxlength="10"/>
+                <button class="my-numbers-save" id="myNumbersSave">Save</button>
+                <button class="my-numbers-clear" id="myNumbersClear">✕</button>
+              </div>
+              <div class="my-numbers-hint" id="myNumbersHint"></div>
+            </div>
+
+          </div><!-- /filters-grid -->
+
+          <!-- Number of sets -->
+          <div class="filter-group" id="numSetsGroup">
+            <label for="numSets">Number of sets</label>
+            <select class="filter-select" id="numSets">
+              <option value="1">1 set</option>
+              <option value="2">2 sets</option>
+              <option value="3">3 sets</option>
+              <option value="5">5 sets</option>
+              <option value="10">10 sets</option>
+            </select>
+          </div>
+
+          <div class="gen-actions">
+            <button class="btn-primary" id="genBtn">Generate My Numbers</button>
+            <button class="btn-secondary" id="regenBtn" style="display:none">↻ Regenerate</button>
+          </div>
+
+          <div class="result-area" id="resultArea">
+            <div class="result-label">Generated set</div>
+            <div class="result-balls" id="resultBalls"></div>
+            <div class="why-box" id="whyBox"></div>
+            <div class="result-actions">
+              <button class="result-btn" id="savePickBtn" style="display:none">☆ Save pick</button>
+              <button class="result-btn" id="copyNumsBtn">⊞ Copy numbers</button>
+            </div>
+            <p class="generator-disclaimer">Each lottery draw is statistically independent. Past frequency does not influence future results. This is a random selection tool, not a prediction system.</p>
+          </div>
+
+        </div><!-- /generator-body -->
+      </div><!-- /generator-wrap -->
+    </div>
+
+    <hr class="section-divider"/>
+
+    <!-- Draw table -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Recent draw results</h2>
+      </div>
+      <p class="section-desc" id="drawTableDesc">Your uploaded draws.</p>
+      <div class="draw-table-wrap">
+        <table class="draw-table">
+          <thead>
+            <tr>
+              <th>Draw date</th>
+              <th>Winning numbers</th>
+              <th>Bonus</th>
+              <th>Jackpot</th>
+            </tr>
+          </thead>
+          <tbody id="drawTableBody"></tbody>
+        </table>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+
+    <!-- Did my numbers win -->
+    <div class="section" id="checkSection">
+      <div class="section-header">
+        <h2 class="section-title">Did my numbers ever win?</h2>
+      </div>
+      <p class="section-desc">Enter up to <span id="checkPicksLabel">6</span> numbers to see if they've ever appeared together in a real draw.</p>
+      <div class="check-wrap">
+        <div class="check-inputs" id="checkInputs"></div>
+        <button class="btn-primary" id="checkBtn" style="margin-top:16px">Check My Numbers</button>
+        <button class="btn-secondary" id="checkResetBtn" style="margin-top:16px;display:none">✕ Reset</button>
+      </div>
+      <div class="check-results" id="checkResults" style="display:none">
+        <div class="check-summary" id="checkSummary"></div>
+        <div class="check-partials" id="checkPartials"></div>
+      </div>
+    </div>
+
+    <!-- Transparency -->
+    <div class="transparency">
+      <h3>Data transparency &amp; responsibility</h3>
+      <ul>
+        <li>Analysis is based entirely on your uploaded CSV file. LottoIQ does not store or transmit your data.</li>
+        <li>Statistics are for entertainment and informational purposes only — they do not predict future draws.</li>
+        <li>LottoIQ does not sell lottery tickets or guarantee any outcomes.</li>
+        <li>If gambling is affecting you or someone you know, visit <a href="https://www.connexontario.ca">ConnexOntario.ca</a> or call 1-866-531-2600.</li>
+      </ul>
+    </div>
+
+  </div><!-- /page-body -->
+</div><!-- /analysisWrap -->
+
+
+<!-- Scripts -->
+<script src="/js/auth.js"></script>
+<script src="/js/config.js"></script>
+<script src="/js/analytics.js"></script>
+<script src="/js/render.js"></script>
+<script src="/js/generator.js"></script>
+<script src="/js/ui.js"></script>
+
+<script>
+// ============================================================
+// Custom game CSV loader — replaces airtable.js for this page
+// All analysis runs in-browser from the uploaded file.
+// ============================================================
+
+// Shared state — mirrors config.js globals used by other JS files
+// These variables are declared in config.js — just reassign values here
+currentGame     = 'custom';
+allDrawsData    = {};
+activeFreq      = {};
+selectedOverdue = [];
+currentPageNum  = 1;
+currentDataset  = 'last30';
+// ROWS_PER_PAGE is const in config.js — no reassignment needed
+
+// Custom game config — populated after CSV parse + user confirm
+let customCfg = null;
+let customDraws = [];   // raw parsed draw objects { date, nums, bonus }
+let customRawRows = []; // raw CSV rows for display
+
+// ── CSV Parser ────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return null;
+
+  const headers = lines[0].split(',').map(h => h.trim());
+
+  // Detect number columns — N1, N2... or num1, num2... or first numeric-looking cols
+  let numCols = headers.filter(h => /^N\d+$/i.test(h));
+  if (!numCols.length) {
+    numCols = headers.filter(h => /^num\d+$/i.test(h));
+  }
+  if (!numCols.length) {
+    // Fallback: columns that aren't date/bonus/jackpot
+    numCols = headers.filter(h =>
+      !/(date|bonus|jackpot|year|draw)/i.test(h)
+    );
+  }
+
+  const dateCol  = headers.find(h => /(date)/i.test(h)) || null;
+  const bonusCol = headers.find(h => /^bonus$/i.test(h)) || null;
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = lines[i].split(',').map(v => v.trim());
+    if (vals.length < numCols.length) continue;
+
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h] = vals[idx] || ''; });
+    rows.push(obj);
+  }
+
+  if (!rows.length || !numCols.length) return null;
+
+  // Auto-detect pool size and picks
+  const picks = numCols.length;
+  let maxSeen = 0;
+  rows.forEach(r => {
+    numCols.forEach(c => {
+      const v = parseInt(r[c]);
+      if (!isNaN(v) && v > maxSeen) maxSeen = v;
+    });
+  });
+
+  return {
+    headers, numCols, dateCol, bonusCol,
+    picks, poolDetected: maxSeen,
+    rows,
+    drawCount: rows.length,
+  };
+}
+
+function rowsToDraws(rows, numCols, dateCol, bonusCol, pool) {
+  return rows.map(r => {
+    const nums = numCols
+      .map(c => parseInt(r[c]))
+      .filter(n => !isNaN(n) && n >= 1 && n <= pool)
+      .sort((a, b) => a - b);
+
+    return {
+      date:   dateCol ? (r[dateCol] || '') : '',
+      nums,
+      bonus:  bonusCol ? (parseInt(r[bonusCol]) || null) : null,
+      jackpot: '',
+    };
+  }).filter(d => d.nums.length > 0);
+}
+
+// ── Build GAME_CONFIG entry for custom game ────────────────────
+function buildCustomConfig(gameName, picks, pool, hasBonus) {
+  const sumRange = [
+    Math.round(picks * (pool * 0.2)),
+    Math.round(picks * (pool * 0.8)),
+  ];
+  return {
+    table:        'custom',
+    label:        gameName,
+    title:        `${gameName} Statistics & Analysis`,
+    sub:          'Based on your uploaded draw data',
+    maxNum:       pool,
+    numCols:      picks,
+    sumRange,
+    nextDrawDays: [],
+    lowMid:       Math.round(pool / 2),
+  };
+}
+
+// ── Populate odd/even and low/high dropdowns dynamically ───────
+function populateFilterDropdowns(picks) {
+  const oeEl = document.getElementById('oddEven');
+  const lhEl = document.getElementById('lowHigh');
+  if (!oeEl || !lhEl) return;
+
+  oeEl.innerHTML = '<option value="any">Any balance</option>';
+  lhEl.innerHTML = '<option value="any">Any balance</option>';
+
+  for (let o = 0; o <= picks; o++) {
+    const e   = picks - o;
+    const opt = document.createElement('option');
+    opt.value       = `${o}-${e}`;
+    opt.textContent = `${o} odd / ${e} even`;
+    oeEl.appendChild(opt);
+  }
+
+  for (let l = 0; l <= picks; l++) {
+    const h   = picks - l;
+    const opt = document.createElement('option');
+    opt.value       = `${l}-${h}`;
+    opt.textContent = `${l} low / ${h} high`;
+    lhEl.appendChild(opt);
+  }
+}
+
+// ── Run full analysis ─────────────────────────────────────────
+function runCustomAnalysis() {
+  const cfg    = customCfg;
+  const draws  = customDraws;
+
+  // Store in allDrawsData as fake Airtable records
+  // (render.js and analytics.js use allDrawsData via parseRecord)
+  // For custom games we store pre-parsed draws directly
+  allDrawsData['custom'] = draws.map(d => ({ fields: d, _parsed: d }));
+
+  // Store parsed draws on window for direct access
+  window._customDraws = draws;
+
+  // Register in GAME_CONFIG
+  GAME_CONFIG['custom'] = cfg;
+
+  const statsDraws = sliceDraws(draws, currentDataset);
+  activeFreq = computeFreq(statsDraws, cfg.maxNum);
+
+  // Update hero manually (render.js updateHero reads from Airtable format)
+  document.getElementById('heroTitle').textContent  = cfg.title;
+  document.getElementById('heroSub').textContent    = cfg.sub;
+  document.getElementById('statTotalDraws').textContent = draws.length.toLocaleString('en-CA');
+  document.getElementById('statNextDraw').textContent   = cfg.numCols;
+  document.getElementById('drawTableDesc').textContent  = `Your uploaded ${cfg.label} draws.`;
+  document.getElementById('heatmapDesc').textContent    =
+    `Every number 1–${cfg.maxNum}, shaded by how often it has been drawn. Warmer = more frequent.`;
+
+  const latest = draws[0]?.date;
+  if (latest) {
+    document.getElementById('statRecentDate').textContent = latest;
+    document.getElementById('lastUpdated').textContent    = `Updated: ${latest}`;
+  }
+
+  // Sum hint
+  document.getElementById('sumHint').textContent =
+    `Typical range ${cfg.sumRange[0]}–${cfg.sumRange[1]}`;
+  document.getElementById('sumMin').value = cfg.sumRange[0];
+  document.getElementById('sumMax').value = cfg.sumRange[1];
+
+  // Render analytics
+  renderHeatmap(activeFreq, cfg.maxNum);
+  renderHotCold(activeFreq);
+  renderOverdue(computeOverdue(draws, cfg.maxNum));
+  renderPatternStats(statsDraws, cfg);
+  renderCustomDrawTable(draws);
+  initCheckMyNumbers(draws, cfg);
+  populateTopPairs(draws, cfg);
+
+  // Wire dataset selector
+  document.querySelectorAll('.ds-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ds = btn.dataset.dataset;
+      if (ds === currentDataset) return;
+      currentDataset = ds;
+      document.querySelectorAll('.ds-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const sd = sliceDraws(draws, currentDataset);
+      activeFreq = computeFreq(sd, cfg.maxNum);
+      renderHeatmap(activeFreq, cfg.maxNum);
+      renderHotCold(activeFreq);
+      renderPatternStats(sd, cfg);
+
+      // Update Auto hints
+      const hints = computeDatasetHints(sd, cfg);
+      window._lastHints    = hints;
+      window._lastHintsCfg = cfg;
+      updateGeneratorHints(hints, cfg);
+      if (document.getElementById('genModeAuto')?.classList.contains('active')) {
+        applyAutoFilters(hints, cfg);
+        applySumRange('typical', hints);
+      }
+    });
+  });
+
+  // Init generator mode
+  populateFilterDropdowns(cfg.numCols);
+  initGeneratorMode();
+
+  // Show analysis, hide upload
+  document.getElementById('uploadScreen').style.display = 'none';
+  document.getElementById('configScreen').style.display = 'none';
+  document.getElementById('analysisWrap').style.display  = 'block';
+  document.getElementById('loadingOverlay').style.display = 'none';
+
+  // Reset generator
+  document.getElementById('resultArea').classList.remove('visible');
+  document.getElementById('regenBtn').style.display = 'none';
+}
+
+// ── Slice draws (mirrors sliceByDataset but for plain arrays) ──
+function sliceDraws(draws, dataset) {
+  if (dataset === 'alltime') return draws;
+  if (dataset === 'last90')  return draws.slice(0, 90);
+  return draws.slice(0, 30);
+}
+
+// ── Render draw table for custom draws ────────────────────────
+function renderCustomDrawTable(draws) {
+  currentPageNum = 1;
+  renderCustomDrawPage(draws);
+}
+
+function renderCustomDrawPage(draws) {
+  const totalPages = Math.ceil(draws.length / ROWS_PER_PAGE);
+  const start      = (currentPageNum - 1) * ROWS_PER_PAGE;
+  const slice      = draws.slice(start, start + ROWS_PER_PAGE);
+
+  document.getElementById('drawTableBody').innerHTML = slice.map(d => `
+    <tr>
+      <td class="draw-date">${d.date || '—'}</td>
+      <td><div class="draw-balls">
+        ${d.nums.map(n => `<div class="draw-ball">${n}</div>`).join('')}
+      </div></td>
+      <td><div class="draw-ball bonus">${d.bonus !== null ? d.bonus : '—'}</div></td>
+      <td class="draw-jackpot">—</td>
+    </tr>`).join('');
+
+  const pag = document.getElementById('pagination');
+  pag.innerHTML = '';
+  for (let p = 1; p <= Math.min(totalPages, 20); p++) {
+    const btn = document.createElement('button');
+    btn.className   = 'page-btn' + (p === currentPageNum ? ' active' : '');
+    btn.textContent = p;
+    btn.addEventListener('click', () => {
+      currentPageNum = p;
+      renderCustomDrawPage(draws);
+    });
+    pag.appendChild(btn);
+  }
+}
+
+// ── Override parseRecord for custom game ─────────────────────
+// generator.js and analytics.js call parseRecord(r, numCols)
+// For custom games, records are already parsed draw objects
+const _origParseRecord = typeof parseRecord === 'function' ? parseRecord : null;
+function parseRecord(rec, numCols) {
+  if (rec._parsed) return rec._parsed;
+  if (_origParseRecord) return _origParseRecord(rec, numCols);
+  return rec;
+}
+
+// ── UI wiring ─────────────────────────────────────────────────
+let parsedCsvData = null;
+
+// File chosen
+document.getElementById('csvFile').addEventListener('change', function() {
+  const f = this.files[0];
+  document.getElementById('fileChosen').textContent = f ? `✓ ${f.name}` : '';
+});
+
+// Drag and drop
+const drop = document.getElementById('uploadDrop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag-over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+drop.addEventListener('drop', e => {
+  e.preventDefault();
+  drop.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) {
+    document.getElementById('csvFile').files = e.dataTransfer.files;
+    document.getElementById('fileChosen').textContent = `✓ ${f.name}`;
+  }
+});
+
+// Parse button
+document.getElementById('parseBtn').addEventListener('click', () => {
+  const file = document.getElementById('csvFile').files[0];
+  const name = document.getElementById('customGameName').value.trim();
+  const errEl = document.getElementById('uploadError');
+  errEl.style.display = 'none';
+
+  if (!name) {
+    errEl.textContent = 'Please enter a name for your game.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!file) {
+    errEl.textContent = 'Please select a CSV file.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const result = parseCSV(e.target.result);
+    if (!result || result.drawCount < 5) {
+      errEl.textContent = 'Could not read draws from this file. Check the format and try again.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    parsedCsvData = result;
+
+    // Populate config screen
+    document.getElementById('configGameTitle').textContent = name;
+    document.getElementById('cfgPicks').value     = result.picks;
+    document.getElementById('cfgPool').value      = result.poolDetected;
+    document.getElementById('cfgDrawCount').value = result.drawCount;
+    document.getElementById('cfgBonus').value     = result.bonusCol ? 'yes' : 'no';
+    document.getElementById('cfgPicksDetected').textContent =
+      `Auto-detected: ${result.picks} columns (${result.numCols.join(', ')})`;
+    document.getElementById('cfgPoolDetected').textContent =
+      `Highest number seen: ${result.poolDetected}`;
+    document.getElementById('cfgDateDetected').textContent =
+      result.dateCol
+        ? `✓ Date column detected: "${result.dateCol}"`
+        : 'No date column detected — draws will show without dates.';
+
+    document.getElementById('uploadScreen').style.display = 'none';
+    document.getElementById('configScreen').style.display = 'block';
+  };
+  reader.readAsText(file);
+});
+
+// Back button
+document.getElementById('backBtn').addEventListener('click', () => {
+  document.getElementById('configScreen').style.display = 'none';
+  document.getElementById('uploadScreen').style.display = 'block';
+});
+
+// Confirm button
+document.getElementById('confirmBtn').addEventListener('click', () => {
+  const errEl  = document.getElementById('configError');
+  errEl.style.display = 'none';
+
+  const picks    = parseInt(document.getElementById('cfgPicks').value);
+  const pool     = parseInt(document.getElementById('cfgPool').value);
+  const hasBonus = document.getElementById('cfgBonus').value === 'yes';
+  const gameName = document.getElementById('customGameName').value.trim() ||
+                   document.getElementById('configGameTitle').textContent;
+
+  if (picks < 2 || picks > 10) {
+    errEl.textContent = 'Numbers per draw must be between 2 and 10.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (pool < picks || pool > 100) {
+    errEl.textContent = 'Highest ball number must be greater than picks and no more than 100.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('loadingOverlay').style.display = 'flex';
+
+  setTimeout(() => {
+    customCfg   = buildCustomConfig(gameName, picks, pool, hasBonus);
+    customDraws = rowsToDraws(
+      parsedCsvData.rows,
+      parsedCsvData.numCols,
+      parsedCsvData.dateCol,
+      hasBonus ? parsedCsvData.bonusCol : null,
+      pool
+    );
+
+    // Save to sessionStorage so analysis survives navigation between game tabs
+    try {
+      sessionStorage.setItem('lottoiq_custom_draws', JSON.stringify(customDraws));
+      sessionStorage.setItem('lottoiq_custom_cfg',   JSON.stringify(customCfg));
+      sessionStorage.setItem('lottoiq_custom_name',  gameName);
+    } catch(e) { /* sessionStorage full or unavailable */ }
+
+    if (customDraws.length < 5) {
+      document.getElementById('loadingOverlay').style.display = 'none';
+      errEl.textContent = 'Not enough valid draws found. Check your pool size and column names.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    runCustomAnalysis();
+  }, 300);
+});
+
+// New upload button — clears session so member starts fresh
+document.getElementById('newUploadBtn').addEventListener('click', () => {
+  try {
+    sessionStorage.removeItem('lottoiq_custom_draws');
+    sessionStorage.removeItem('lottoiq_custom_cfg');
+    sessionStorage.removeItem('lottoiq_custom_name');
+  } catch(e) {}
+  document.getElementById('analysisWrap').style.display  = 'none';
+  document.getElementById('uploadScreen').style.display = 'block';
+  document.getElementById('csvFile').value = '';
+  document.getElementById('fileChosen').textContent = '';
+  document.getElementById('customGameName').value = '';
+});
+
+// ── Early session check ──────────────────────────────────────
+// Runs synchronously before DOMContentLoaded to avoid flash
+// of the upload screen when restoring a saved custom game.
+try {
+  if (sessionStorage.getItem('lottoiq_custom_draws')) {
+    document.getElementById('uploadScreen').style.display = 'none';
+    document.getElementById('loadingOverlay').style.display = 'flex';
+  }
+} catch(e) {}
+
+
+// Auth — Insider only
+document.addEventListener('DOMContentLoaded', async () => {
+  // Wire game tabs so members can navigate back to built-in games
+  initGameTabs();
+  setActiveTabFromURL();
+
+  // initAuth() from auth.js handles redirect + tier
+  const memberData = await initAuth();
+  if (!memberData) return;
+
+  // Only Insider can use this page
+  const tier = (memberData.planConnections || [])
+    .filter(p => p.status === 'ACTIVE')
+    .map(p => p.planId);
+
+  const isInsider = tier.includes('pln_insider--st9g0qnu');
+  if (!isInsider) {
+    document.getElementById('uploadScreen').innerHTML = `
+      <div class="upload-screen">
+        <div class="upload-title">Insider <span>Only</span></div>
+        <p class="upload-sub">The custom lottery analyser is available to Insider members. Upgrade to access this feature and unlock all analytics tools.</p>
+        <button class="btn-upgrade" onclick="openUpgradeCheckout('${PRICE_MONTHLY}')">Upgrade to Insider →</button>
+      </div>`;
+    return;
+  }
+
+  // ── Restore session ───────────────────────────────────────
+  // If the member navigated away and came back, restore their
+  // custom game analysis from sessionStorage automatically.
+  try {
+    const savedDraws = sessionStorage.getItem('lottoiq_custom_draws');
+    const savedCfg   = sessionStorage.getItem('lottoiq_custom_cfg');
+    const savedName  = sessionStorage.getItem('lottoiq_custom_name');
+
+    if (savedDraws && savedCfg) {
+      customDraws = JSON.parse(savedDraws);
+      customCfg   = JSON.parse(savedCfg);
+
+      // Pre-fill the game name field for consistency
+      const nameEl = document.getElementById('customGameName');
+      if (nameEl && savedName) nameEl.value = savedName;
+
+      // Skip upload screen — go straight to analysis
+      document.getElementById('loadingOverlay').style.display = 'flex';
+      setTimeout(() => runCustomAnalysis(), 100);
+    }
+  } catch(e) { /* sessionStorage unavailable — show upload screen normally */ }
+});
+</script>
+
+</body>
+</html>
+

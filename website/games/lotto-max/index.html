@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lotto MAX Statistics &amp; Analysis — LottoIQ</title>
+  <meta name="robots" content="noindex, nofollow"/>
+  <meta name="description" content="Lotto 6/49 draw frequency analysis, hot and cold numbers, overdue tracker, and smart number generator. Member-only analytics by LottoIQ.ca"/>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <!-- Memberstack — must load before auth.js -->
+  <script async
+    data-memberstack-app="app_cmpg8yz3h001h0slnha1cbudp"
+    src="https://static.memberstack.com/scripts/v1/memberstack.js">
+  </script>
+
+  <!-- Styles — load in this exact order -->
+  <link rel="stylesheet" href="/css/tokens.css"/>
+  <link rel="stylesheet" href="/css/base.css"/>
+  <link rel="stylesheet" href="/css/nav.css"/>
+  <link rel="stylesheet" href="/css/game-tabs.css"/>
+  <link rel="stylesheet" href="/css/hero.css"/>
+  <link rel="stylesheet" href="/css/sections.css"/>
+  <link rel="stylesheet" href="/css/heatmap.css"/>
+  <link rel="stylesheet" href="/css/generator.css"/>
+  <link rel="stylesheet" href="/css/draw-table.css"/>
+  <link rel="stylesheet" href="/css/gates.css"/>
+  <link rel="stylesheet" href="/css/responsive.css"/>
+</head>
+<body>
+
+<!-- ============================================================
+     LOADING OVERLAY
+     Shown while Airtable data is being fetched.
+     Controlled by showLoading() / hideLoading() in ui.js
+     ============================================================ -->
+<div id="loadingOverlay">
+  <div class="loading-logo">Lotto<span>IQ</span></div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Loading draw data…</div>
+</div>
+
+
+<!-- ============================================================
+     MEMBER NAV
+     Sticky top bar. Tier badge + avatar will be bound
+     to auth session data in a future step.
+     ============================================================ -->
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="/">Lotto<span>IQ</span>.ca</a>
+    <div class="nav-right">
+      <span class="tier-badge standard">Standard</span>
+      <a class="nav-upgrade" href="/upgrade">Upgrade ↗</a>
+      <div class="nav-avatar">J</div>
+	  <button class="nav-logout" id="logoutBtn" aria-label="Log out">Sign out</button>
+    </div>
+  </div>
+</nav>
+
+
+<!-- ============================================================
+     GAME TABS
+     data-game attribute used by ui.js to set the active tab
+     based on window.location.pathname — no inline onclick needed.
+     ============================================================ -->
+<div class="game-tabs">
+  <div class="game-tab" data-game="lotto-649">Lotto 6/49</div>
+  <div class="game-tab" data-game="lotto-max">Lotto MAX</div>
+  <div class="game-tab" data-game="lottario">Lottario</div>
+  <div class="game-tab" data-game="ontario-49">Ontario 49</div>
+  <div class="game-tab" data-game="custom">My Lottery</div>
+</div>
+
+
+<!-- ============================================================
+     HERO
+     Title, metadata pill, and stat strip.
+     All values with id="..." are populated by updateHero() in render.js
+     ============================================================ -->
+<div class="hero">
+  <div class="hero-inner">
+
+    <div class="hero-title-row">
+      <h1 id="heroTitle">Lotto 6/49 Statistics &amp; Analysis</h1>
+      <div class="last-updated" id="lastUpdated">Updated: —</div>
+    </div>
+
+    <p class="hero-sub" id="heroSub">Unofficial data based on OLG draw results. Updated weekly.</p>
+    <p class="hero-disclaimer">For entertainment purposes only. Statistics do not predict future draws.</p>
+
+    <!-- Stat Strip -->
+    <div class="stat-strip">
+
+      <div class="stat-card">
+        <div class="stat-card-label">Total draws<br>recorded</div>
+        <div class="stat-card-value" id="statTotalDraws">—</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-label">Most recent<br>draw date</div>
+        <div class="stat-card-value" id="statRecentDate" style="font-size:26px;line-height:1.15">—</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-label">Most frequent<br>number</div>
+        <div class="stat-card-value ball-inline">
+          <span class="ball-sm ball-gold" id="statHotBall">—</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-label">Least frequent<br>number</div>
+        <div class="stat-card-value ball-inline">
+          <span class="ball-sm ball-outline" id="statColdBall">—</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-label">Next draw</div>
+        <div class="stat-card-value" id="statNextDraw" style="font-size:22px;line-height:1.2;color:var(--text)">—</div>
+      </div>
+
+    </div><!-- /stat-strip -->
+  </div><!-- /hero-inner -->
+</div><!-- /hero -->
+
+
+<!-- ============================================================
+     PAGE BODY
+     All analytics sections live inside this centred container.
+     ============================================================ -->
+<div class="page-body">
+
+
+  <!-- ── DATASET SELECTOR ─────────────────────────────────── -->
+  <!-- Locked buttons become active when user is Insider tier -->
+  <div class="dataset-wrap">
+    <div class="dataset-selector">
+      <span class="ds-label">Dataset</span>
+      <button class="ds-btn locked" data-dataset="alltime" disabled>All-time <span class="ds-lock">🔒</span></button>
+      <button class="ds-btn locked" data-dataset="last90" disabled>Last 90 <span class="ds-lock">🔒</span></button>
+      <button class="ds-btn active" data-dataset="last30">Last 30 draws</button>
+    </div>
+    <div class="dataset-note">All-time &amp; Last 90 · Insider only</div>
+  </div>
+
+
+  <!-- ── HEATMAP ──────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">Draw frequency heatmap</h2>
+      <span class="section-note">Hover any ball for detail</span>
+    </div>
+    <p class="section-desc" id="heatmapDesc">Every number 1–49, shaded by how often it has been drawn. Warmer = more frequent.</p>
+    <!-- Balls injected here by renderHeatmap() in render.js -->
+    <div class="heatmap-grid" id="heatmapGrid"></div>
+    <div class="hm-legend">
+      <span>Lower frequency</span>
+      <div class="hm-legend-dots"><span class="hm-legend-dot" style="background:#1a2e3b"></span><span class="hm-legend-dot" style="background:#1e4d5c"></span><span class="hm-legend-dot" style="background:#1f6b6e"></span><span class="hm-legend-dot" style="background:#1d8a72"></span><span class="hm-legend-dot" style="background:#3a9e68"></span><span class="hm-legend-dot" style="background:#6aab4e"></span><span class="hm-legend-dot" style="background:#a0b83a"></span><span class="hm-legend-dot" style="background:#d4a020"></span><span class="hm-legend-dot" style="background:#e63c00"></span></div>
+      <span>Higher frequency</span>
+    </div>
+  </div>
+
+  <hr class="section-divider"/>
+
+
+  <!-- ── HOT & COLD NUMBERS ───────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">Hot &amp; cold numbers</h2>
+    </div>
+    <p class="section-desc">Hot numbers have appeared most often in the last 30 draws. Cold numbers have appeared least.</p>
+    <div class="two-col">
+
+      <div class="panel">
+        <div class="panel-title">🔥 Hot right now</div>
+        <div class="panel-sub">Top 6 most drawn</div>
+        <!-- Balls injected by renderHotCold() in render.js -->
+        <div class="ball-row" id="hotBalls"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">🧊 Cold numbers</div>
+        <div class="panel-sub">Bottom 6 least drawn</div>
+        <!-- Balls injected by renderHotCold() in render.js -->
+        <div class="ball-row" id="coldBalls"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr class="section-divider"/>
+
+
+  <!-- ── OVERDUE NUMBERS ──────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">Overdue numbers</h2>
+      <span class="section-note">Overdue ≠ due — each draw is independent</span>
+    </div>
+    <p class="overdue-hint">Tap up to 2 numbers to lock them into your generated pick below.</p>
+    <!-- Rows injected by renderOverdue() in render.js -->
+    <div class="overdue-grid" id="overdueGrid"></div>
+  </div>
+
+  <hr class="section-divider"/>
+
+
+  <!-- ── INSIDER GATE: TOP NUMBER PAIRS ───────────────────── -->
+  <!-- Hidden for Insider users; replaced with actual pairs data -->
+  <div class="insider-gate" id="pairsGate">
+    <div class="gate-icon">🔒</div>
+    <div class="gate-title">Top number pairs — Insider feature</div>
+    <div class="gate-desc">See the 10 number combinations that appear together most often in the same draw. Unlock all datasets and every Insider filter with one upgrade.</div>
+    <button class="gate-btn" id="pairsUpgradeBtn">Upgrade to Insider — $9.99/month</button>
+  </div>
+
+
+  <!-- ── PATTERN STATISTICS ───────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">Pattern statistics</h2>
+    </div>
+    <p class="section-desc">Typical characteristics of a winning draw in the last 30 draws.</p>
+    <div class="pattern-grid">
+
+      <div class="pattern-card">
+        <div class="pattern-label">Average draw sum</div>
+        <!-- Value injected by renderPatternStats() in render.js -->
+        <div class="pattern-value" id="statSum">—</div>
+        <div class="pattern-detail">Sum of all drawn numbers</div>
+      </div>
+
+      <div class="pattern-card">
+        <div class="pattern-label">Typical odd / even</div>
+        <div class="pattern-value" id="statOddEven">—</div>
+        <div class="pattern-detail">Most common breakdown</div>
+      </div>
+
+      <div class="pattern-card">
+        <div class="pattern-label">Typical low / high</div>
+        <div class="pattern-value" id="statLowHigh">—</div>
+        <div class="pattern-detail" id="statLowHighDetail">Low · High</div>
+      </div>
+
+      <div class="pattern-card">
+        <div class="pattern-label">Consecutive pairs</div>
+        <div class="pattern-value" id="statConsec">—</div>
+        <div class="pattern-detail">Draws with at least one consecutive pair</div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr class="section-divider"/>
+
+
+  <!-- ── SMART NUMBER GENERATOR ───────────────────────────── -->
+  <div class="section">
+    <div class="generator-wrap">
+
+      <div class="generator-header">
+        <h2>Number Generator</h2>
+        <p>A filtered random picker weighted by recent draw frequency. Every combination has the same odds — this tool helps you apply your own criteria, not improve your chances.</p>
+      </div>
+
+      <div class="generator-body">
+
+      <!-- Auto / Manual toggle — Insider only, hidden for Standard -->
+      <div class="gen-mode-wrap" id="genModeWrap" style="display:none">
+        <div class="gen-mode-tabs">
+          <div class="gen-mode-tab active" id="genModeAuto">Auto</div>
+          <div class="gen-mode-tab" id="genModeManual">Manual</div>
+        </div>
+      </div>
+
+        <div class="filters-grid">
+
+          <!-- Sum range -->
+          <div class="filter-group">
+            <label for="sumRange">Sum range</label>
+            <select class="filter-select" id="sumRange">
+              <option value="typical" selected>Typical</option>
+              <option value="low">Low</option>
+              <option value="high">High</option>
+            </select>
+            <input type="hidden" id="sumMin" value="130"/>
+            <input type="hidden" id="sumMax" value="220"/>
+            <div class="filter-hint" id="sumHint">Typical range 130–220</div>
+          </div>
+
+          <!-- Odd / Even balance -->
+          <div class="filter-group">
+            <label for="oddEven">Odd / Even balance</label>
+            <select class="filter-select" id="oddEven">
+              <option value="any">Any balance</option>
+              <option value="3-3" selected>3 odd / 3 even</option>
+              <option value="4-2">4 odd / 2 even</option>
+              <option value="2-4">2 odd / 4 even</option>
+              <option value="5-1">5 odd / 1 even</option>
+            </select>
+            <div class="gen-hint-wrap" id="oddEvenHint"></div>
+          </div>
+
+          <!-- Low / High balance -->
+          <div class="filter-group">
+            <label for="lowHigh">Low / High balance</label>
+            <select class="filter-select" id="lowHigh">
+              <option value="any">Any balance</option>
+              <option value="3-3" selected>3 low / 3 high</option>
+              <option value="4-2">4 low / 2 high</option>
+              <option value="2-4">2 low / 4 high</option>
+            </select>
+            <div class="gen-hint-wrap" id="lowHighHint"></div>
+          </div>
+
+          <!-- Include overdue -->
+          <div class="filter-group">
+            <label for="overdueCount">Include overdue numbers</label>
+            <select class="filter-select" id="overdueCount">
+              <option value="0">None</option>
+              <option value="1">1 overdue number</option>
+              <option value="2">2 overdue numbers</option>
+            </select>
+          </div>
+
+          <!-- NEVER APPEARED — Insider locked -->
+          <div class="filter-group" id="neverAppearedGroup" style="display:none">
+            <label>Uniqueness <span class="locked-badge">Insider</span></label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="neverAppeared" disabled/>
+              Never drawn before
+            </label>
+          </div>
+
+          <!-- SPREAD — Insider locked -->
+          <div class="filter-group" id="spreadFilterGroup" style="display:none">
+            <label for="spreadFilter">Spread</label>
+            <select class="filter-select" id="spreadFilter" disabled>
+              <option value="any">Any spread</option>
+              <option value="narrow">Narrow (clustered)</option>
+              <option value="medium">Medium (balanced)</option>
+              <option value="wide">Wide (full range)</option>
+            </select>
+            <div class="gen-hint-wrap" id="spreadHint"></div>
+          </div>
+
+          <!-- TOP PAIR — Insider locked -->
+          <div class="filter-group filter-locked">
+            <label for="topPair">Include a top pair <span class="locked-badge">Insider</span></label>
+            <select class="filter-select" id="topPair" disabled>
+              <option value="none">Unlock with Insider</option>
+            </select>
+          </div>
+
+          <!-- MY NUMBERS — Insider locked -->
+          <div class="filter-group filter-locked">
+            <label>My Numbers <span class="locked-badge">Insider</span></label>
+            <div class="my-numbers-wrap">
+              <input type="text" class="filter-text" id="myNumbersInput" placeholder="e.g. 7, 14" disabled
+                     maxlength="10" title="Enter up to 2 numbers separated by a comma"/>
+              <button class="my-numbers-save" id="myNumbersSave" disabled title="Save my numbers">Save</button>
+              <button class="my-numbers-clear" id="myNumbersClear" disabled title="Clear my numbers">✕</button>
+            </div>
+            <div class="my-numbers-hint" id="myNumbersHint"></div>
+          </div>
+
+        </div><!-- /filters-grid -->
+
+        <!-- Number of sets — Insider only -->
+        <div class="filter-group filter-locked" id="numSetsGroup" style="display:none">
+          <label for="numSets">Number of sets <span class="locked-badge">Insider</span></label>
+          <select class="filter-select" id="numSets" disabled>
+            <option value="1">1 set</option>
+            <option value="2">2 sets</option>
+            <option value="3">3 sets</option>
+            <option value="5">5 sets</option>
+            <option value="10">10 sets</option>
+          </select>
+        </div>
+
+        <!-- Generate actions -->
+        <div class="gen-actions">
+          <button class="btn-primary" id="genBtn">Generate My Numbers</button>
+          <button class="btn-secondary" id="regenBtn" style="display:none">↻ Regenerate</button>
+        </div>
+
+        <!-- Result display — hidden until first generation -->
+        <div class="result-area" id="resultArea">
+          <div class="result-label">Generated set</div>
+          <!-- Balls injected by generateNumbers() in generator.js -->
+          <div class="result-balls" id="resultBalls"></div>
+          <!-- Explanation text injected by generateNumbers() -->
+          <div class="why-box" id="whyBox"></div>
+          <div class="result-actions">
+            <button class="result-btn" id="savePickBtn">☆ Save pick</button>
+            <button class="result-btn" id="copyNumsBtn">⊞ Copy numbers</button>
+          </div>
+          <p class="generator-disclaimer">Each lottery draw is statistically independent. Past frequency does not influence future results. This is a random selection tool, not a prediction system.</p>
+        </div>
+
+      </div><!-- /generator-body -->
+    </div><!-- /generator-wrap -->
+  </div><!-- /section -->
+
+
+  <!-- ── RECENT DRAW RESULTS ──────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">Recent draw results</h2>
+    </div>
+    <p class="section-desc" id="drawTableDesc">Latest Lotto 6/49 draws with winning numbers.</p>
+    <div class="draw-table-wrap">
+      <table class="draw-table">
+        <thead>
+          <tr>
+            <th>Draw date</th>
+            <th>Winning numbers</th>
+            <th>Bonus</th>
+            <th>Jackpot</th>
+          </tr>
+        </thead>
+        <!-- Rows injected by renderDrawPage() in render.js -->
+        <tbody id="drawTableBody"></tbody>
+      </table>
+      <!-- Page buttons injected by renderDrawPage() in render.js -->
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+
+
+  <!-- ── DID MY NUMBERS EVER WIN? ───────────────────────── -->
+  <div class="section" id="checkSection">
+    <div class="section-header">
+      <h2 class="section-title">Did my numbers ever win?</h2>
+    </div>
+    <p class="section-desc">Enter up to <span id="checkPicksLabel">6</span> numbers to see if they've ever appeared together in a real draw.</p>
+
+    <div class="check-wrap">
+      <div class="check-inputs" id="checkInputs"></div>
+      <button class="btn-primary" id="checkBtn" style="margin-top:16px">Check My Numbers</button>
+      <button class="btn-secondary" id="checkResetBtn" style="margin-top:16px;display:none">✕ Reset</button>
+    </div>
+
+    <div class="check-results" id="checkResults" style="display:none">
+      <div class="check-summary" id="checkSummary"></div>
+      <div class="check-partials" id="checkPartials"></div>
+    </div>
+  </div>
+
+  <hr class="section-divider"/>
+
+
+  <!-- ── UPGRADE BANNER ───────────────────────────────────── -->
+  <!-- Hidden for Insider users via ui.js -->
+  <div class="upgrade-banner" id="upgradeBanner">
+    <div class="upgrade-text">
+      <h3>Unlock the full LottoIQ toolkit</h3>
+      <p>All-time &amp; 90-draw datasets · Common pairs · Saved favourites · Never-appeared-together filter · Monthly Insider reports</p>
+    </div>
+    <div class="upgrade-actions">
+      <div>
+        <div class="upgrade-price"><strong>$9.99</strong> / month</div>
+        <div class="upgrade-price">or <strong>$79.99</strong> / year — save $40</div>
+      </div>
+      <a class="btn-upgrade" href="/upgrade" id="upgradeCtaBtn">Start free trial</a>
+    </div>
+  </div>
+
+
+  <!-- ── DATA TRANSPARENCY & RESPONSIBILITY ───────────────── -->
+  <!-- Static content — do not modify the helpline details -->
+  <div class="transparency">
+    <h3>Data transparency &amp; responsibility</h3>
+    <ul>
+      <li>All draw data sourced from published results.</li>
+      <li>Statistics are for entertainment and informational purposes only — they do not predict future draws.</li>
+      <li>LottoIQ does not sell lottery tickets or guarantee any outcomes.</li>
+      <li>If gambling is affecting you or someone you know, visit <a href="https://www.connexontario.ca">ConnexOntario.ca</a> or call 1-866-531-2600.</li>
+    </ul>
+  </div>
+
+
+</div><!-- /page-body -->
+
+
+<!-- ============================================================
+     SCRIPTS — loaded in dependency order
+     ============================================================ -->
+<script src="/js/auth.js"></script>
+<script src="/js/config.js"></script>
+<script src="/js/gsheets.js"></script>
+<script src="/js/analytics.js"></script>
+<script src="/js/render.js"></script>
+<script src="/js/generator.js"></script>
+<script src="/js/ui.js"></script>
+<script src="/js/main.js"></script>
+
+</body>
+</html>
+

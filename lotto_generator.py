@@ -267,16 +267,12 @@ def ask_overdue_picks(draws, game, locked_count):
 
 # ── CSV Loader ─────────────────────────────────────────────────────────────────
 
-def load_csv(csv_path: str, picks: int, pool: int, fmt: str) -> tuple[list, dict]:
+def load_csv(csv_path: str, picks: int, pool: int, fmt: str) -> list[tuple]:
     """
     Load historical draws from CSV.
     Handles standard (N1..Nn) and auto-detected column layouts.
-    Returns (draws, draw_dates) where:
-      draws      = list of sorted tuples of main numbers
-      draw_dates = dict of index -> date string for draws that have a date
+    Returns list of sorted tuples of main numbers only.
     """
-    draw_dates = {}
-
     draws = []
     if not os.path.exists(csv_path):
         return draws
@@ -293,56 +289,96 @@ def load_csv(csv_path: str, picks: int, pool: int, fmt: str) -> tuple[list, dict
             num_cols = [c for c in fieldnames
                        if c.lower() not in ("date", "draw_date", "bonus", "year")]
 
-        # Detect date column
-        date_col = None
-        for candidate in ("draw_date", "date", "Draw_Date", "Date", "DATE"):
-            if candidate in fieldnames:
-                date_col = candidate
-                break
-
-        idx = 0
         for row in reader:
             try:
                 if fmt == "pick":
+                    # Pick games: digits 0-9
                     nums = [int(row[c]) for c in num_cols[:picks]]
                     if all(0 <= n <= 9 for n in nums):
-                        if date_col and row.get(date_col, "").strip():
-                            draw_dates[idx] = row[date_col].strip()
-                        draws.append(tuple(nums))
-                        idx += 1
+                        draws.append(tuple(nums))  # Don't sort pick digits
                 else:
                     nums = [int(row[c]) for c in num_cols[:picks]]
                     if all(1 <= n <= pool for n in nums):
-                        if date_col and row.get(date_col, "").strip():
-                            draw_dates[idx] = row[date_col].strip()
                         draws.append(tuple(sorted(nums)))
-                        idx += 1
             except (ValueError, KeyError):
                 continue
 
-    return draws, draw_dates
+    return draws
+
+
+# ── Max Millions Loader ────────────────────────────────────────────────────────
+
+MAX_MILLIONS_CSV = "maxMillions.csv"
+
+def load_max_millions_csv(script_dir: str) -> list[tuple]:
+    """
+    Load Max Millions draws from its CSV.
+    Date format is M/D/YYYY — normalised on load.
+    Returns list of sorted 7-number tuples (no bonus column).
+    """
+    path = os.path.join(script_dir, MAX_MILLIONS_CSV)
+    if not os.path.exists(path):
+        return []
+
+    draws = []
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        num_cols = [c for c in (reader.fieldnames or [])
+                    if c.upper().startswith("N") and c[1:].isdigit()]
+        for row in reader:
+            try:
+                nums = [int(row[c]) for c in num_cols[:7]]
+                if all(1 <= n <= 52 for n in nums):
+                    draws.append(tuple(sorted(nums)))
+            except (ValueError, KeyError):
+                continue
+    return draws
+
+
+def ask_lotto_max_source(script_dir: str, lotto_max_draws: list) -> tuple:
+    """
+    Ask user which Lotto MAX dataset source to use.
+    Returns (draws, source_label) where draws is the combined/selected list.
+    source_label is used to prefix the subsequent ask_dataset label.
+    """
+    print("\n  Loading Max Millions data...")
+    mm_draws = load_max_millions_csv(script_dir)
+
+    lm_count = len(lotto_max_draws)
+    mm_count = len(mm_draws)
+    combined = lotto_max_draws + mm_draws
+    cb_count = len(combined)
+
+    print()
+    print("=" * 55)
+    print("  Dataset Source — Lotto MAX")
+    print("=" * 55)
+    print(f"\n  Which draw pool would you like to analyse?")
+    print(f"  [1] Lotto MAX only          ({lm_count:,} draws)")
+    if mm_count:
+        print(f"  [2] Max Millions only       ({mm_count:,} draws)")
+        print(f"  [3] Lotto MAX + Max Millions ({cb_count:,} draws)")
+    print()
+
+    valid = ("1", "2", "3") if mm_count else ("1",)
+    while True:
+        c = input("  Enter choice: ").strip()
+        if c in valid:
+            break
+        print(f"  Please enter {' or '.join(valid)}.")
+
+    if c == "1":
+        return lotto_max_draws, "Lotto MAX"
+    if c == "2":
+        return mm_draws, "Max Millions"
+    return combined, "Lotto MAX + Max Millions"
 
 
 # ── Dataset Selection ──────────────────────────────────────────────────────────
 
-def _parse_date_flexible(date_str):
-    """Try multiple common date formats; return datetime or None."""
-    from datetime import datetime as _dt
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%Y/%m/%d",
-                "%d-%m-%Y", "%m-%d-%Y", "%d %b %Y", "%B %d, %Y"):
-        try:
-            return _dt.strptime(date_str.strip(), fmt)
-        except ValueError:
-            continue
-    return None
-
-
-def ask_dataset(draws, game_name, draw_dates=None):
+def ask_dataset(draws, game_name):
     """Ask which subset of draws to use. Returns (subset, label)."""
-    total      = len(draws)
-    draw_dates = draw_dates or {}
-    has_dates  = bool(draw_dates)
-
+    total = len(draws)
     print()
     print("=" * 55)
     print(f"  Dataset — {game_name}")
@@ -352,69 +388,18 @@ def ask_dataset(draws, game_name, draw_dates=None):
     print(f"  [2] Last 90 draws         ({min(90, total)} draws)")
     print(f"  [3] Last 30 draws         ({min(30, total)} draws)")
     print(f"  [4] Pure probability      (no historical weighting)")
-    if has_dates:
-        parsed = [_parse_date_flexible(d) for d in draw_dates.values()]
-        parsed = [d for d in parsed if d]
-        if parsed:
-            yr_min = min(d.year for d in parsed)
-            yr_max = max(d.year for d in parsed)
-            # If dates only cover a tiny slice of the full draw history,
-            # the CSV predates the Draw_Date column being added. In that case
-            # show the range as unknown rather than misleadingly narrow.
-            date_coverage = len(parsed) / max(total, 1)
-            if date_coverage < 0.05:
-                print(f"  [5] Date range filter     (enter a year range)")
-            else:
-                print(f"  [5] Date range filter     ({yr_min} – {yr_max})")
     print()
 
-    valid = ("1","2","3","4","5") if has_dates else ("1","2","3","4")
-    prompt = "  Enter 1-5: " if has_dates else "  Enter 1, 2, 3, or 4: "
     while True:
-        c = input(prompt).strip()
-        if c in valid:
+        c = input("  Enter 1, 2, 3, or 4: ").strip()
+        if c in ("1","2","3","4"):
             break
-        print(f"  Please enter one of: {', '.join(valid)}.")
+        print("  Please enter 1, 2, 3, or 4.")
 
     if c == "1": return draws,           f"All {total:,} draws"
     if c == "2": return draws[-90:],     "Last 90 draws"
     if c == "3": return draws[-30:],     "Last 30 draws"
-    if c == "4": return None,            "Pure probability"
-
-    # ── Date range filter ─────────────────────────────────────────────────────
-    parsed_all = [_parse_date_flexible(d) for d in draw_dates.values()]
-    parsed_all = [d for d in parsed_all if d]
-    yr_min     = min(d.year for d in parsed_all) if parsed_all else 2000
-    yr_max     = max(d.year for d in parsed_all) if parsed_all else datetime.now().year
-    print()
-    print(f"  Enter a year range to filter draws ({yr_min} to {yr_max}).")
-    while True:
-        try:
-            yr_from = int(input("  From year: ").strip())
-            yr_to   = int(input("  To year  : ").strip())
-            if yr_from <= yr_to:
-                break
-            print("  'From' year must be <= 'To' year.")
-        except ValueError:
-            print("  Please enter valid 4-digit years.")
-
-    from datetime import datetime as _dt
-    subset = []
-    for i, draw in enumerate(draws):
-        ds = draw_dates.get(i, "")
-        if not ds:
-            continue  # Skip draws with no date when filtering
-        pd = _parse_date_flexible(ds)
-        if pd and yr_from <= pd.year <= yr_to:
-            subset.append(draw)
-
-    if not subset:
-        print(f"  No draws found between {yr_from} and {yr_to}. Using all draws.")
-        return draws, f"All {total:,} draws"
-
-    label = f"{yr_from}–{yr_to} ({len(subset):,} draws)"
-    print(f"  Found {len(subset):,} draws in that range.")
-    return subset, label
+    return None, "Pure probability"
 
 
 # ── Frequency ─────────────────────────────────────────────────────────────────
@@ -531,43 +516,6 @@ def get_common_pairs(draws, n=10):
     return pair_counts.most_common(n)
 
 
-def temperature_bar(cnt, min_cnt, max_cnt, width=20):
-    """
-    Return a coloured temperature bar string for a number's frequency.
-    Uses ANSI escape codes: red=hot, yellow=warm, cyan=cool, blue=cold.
-    Falls back gracefully if the terminal doesn't support colour.
-    """
-    if max_cnt == min_cnt:
-        ratio = 0.5
-    else:
-        ratio = (cnt - min_cnt) / (max_cnt - min_cnt)
-
-    filled = max(1, round(ratio * width))
-    empty  = width - filled
-    bar    = "█" * filled + "░" * empty
-
-    # Pick colour based on ratio quartile
-    if ratio >= 0.75:
-        colour = "\033[91m"   # bright red   — HOT
-    elif ratio >= 0.50:
-        colour = "\033[93m"   # bright yellow — WARM
-    elif ratio >= 0.25:
-        colour = "\033[96m"   # bright cyan   — COOL
-    else:
-        colour = "\033[94m"   # bright blue   — COLD
-    reset = "\033[0m"
-
-    return f"{colour}{bar}{reset}"
-
-
-def temperature_label(ratio):
-    """Return a short temperature tag."""
-    if ratio >= 0.75: return "🔥 HOT "
-    if ratio >= 0.50: return "☀ WARM"
-    if ratio >= 0.25: return "❄ COOL"
-    return               "🧊 COLD"
-
-
 def print_stats(draws, freq, game, dataset_label):
     """Print full stats for the active dataset."""
     n     = len(draws)
@@ -597,33 +545,19 @@ def print_stats(draws, freq, game, dataset_label):
     print(f"  Dataset: {dataset_label}  ({n:,} draws)")
     print("=" * 55)
 
-    # ── Temperature gradient table ─────────────────────────────────────────────
-    print(f"\n  NUMBER TEMPERATURE  (all {pool} numbers ranked by frequency)")
-    print(f"  {'#':>3}  {'Drawn':>5}  {'Temp  ':6}  {'Frequency bar'}")
-    print(f"  {'─'*3}  {'─'*5}  {'─'*6}  {'─'*20}")
+    print(f"\n  TOP 10 most drawn numbers:")
+    max_cnt = max(freq.values()) if freq else 1
+    for num, cnt in sorted_freq[:10]:
+        bar = "#" * int(cnt / max_cnt * 20)
+        print(f"    {num:>2}  ({cnt:>4} times)  {bar}")
 
-    all_counts  = [freq.get(num, 0) for num in range(lo, pool + 1)]
-    min_cnt     = min(all_counts)
-    max_cnt_all = max(all_counts) if all_counts else 1
-
-    for num in range(lo, pool + 1):
-        cnt   = freq.get(num, 0)
-        ratio = (cnt - min_cnt) / (max_cnt_all - min_cnt) if max_cnt_all != min_cnt else 0.5
-        bar   = temperature_bar(cnt, min_cnt, max_cnt_all)
-        tag   = temperature_label(ratio)
-        print(f"  {num:>3}  {cnt:>5}  {tag}  {bar}")
-
-    print(f"\n  HOT  (top 5 most frequent):")
+    print(f"\n  HOT  (most frequent in dataset):")
     for num, cnt in hot:
-        ratio = (cnt - min_cnt) / (max_cnt_all - min_cnt) if max_cnt_all != min_cnt else 0.5
-        bar   = temperature_bar(cnt, min_cnt, max_cnt_all, width=12)
-        print(f"    {num:>2}  appeared {cnt:>4} times  {bar}")
+        print(f"    {num:>2}  appeared {cnt} times")
 
-    print(f"\n  COLD (bottom 5 least frequent):")
+    print(f"\n  COLD (least frequent in dataset):")
     for num, cnt in cold:
-        ratio = (cnt - min_cnt) / (max_cnt_all - min_cnt) if max_cnt_all != min_cnt else 0.5
-        bar   = temperature_bar(cnt, min_cnt, max_cnt_all, width=12)
-        print(f"    {num:>2}  appeared {cnt:>4} times  {bar}")
+        print(f"    {num:>2}  appeared {cnt} times")
 
     print(f"\n  OVERDUE (longest since last seen):")
     for num, ago in overdue[:5]:
@@ -1091,129 +1025,145 @@ def explain_draw(draw, game, filters, freq, locked_nums, dataset_label):
     return reasons
 
 
+# ── Check My Numbers ──────────────────────────────────────────────────────────
 
-# ── Wheeling System ────────────────────────────────────────────────────────────
-
-def ask_wheel(game, script_dir):
+def check_my_numbers(draws, game, script_dir):
     """
-    Full-wheel or abbreviated-wheel generator.
-    Full wheel:  generate ALL combinations from a chosen pool of numbers.
-    Abbreviated: generate a smart reduced set guaranteeing a N-match if any
-                 N numbers from the pool are in the winning draw.
-    Returns list of draw tuples, or [] if skipped.
+    Let the user enter their favourite numbers and check how they
+    have historically performed across all draws in the database.
+    Shows exact matches, partial matches, and best historical result.
+    Optionally loads draws with dates for date display.
     """
-    if game["format"] == "pick":
-        print("\n  Wheeling is not available for digit-based (Pick) games.")
-        return []
+    picks  = game["picks"]
+    pool   = game["pool"]
+    fmt    = game["format"]
+    name   = game["name"]
+    lo     = 0 if fmt == "pick" else 1
+    n      = len(draws)
 
-    picks = game["picks"]
-    pool  = game["pool"]
-    name  = game["name"]
+    if not draws:
+        print("\n  No historical data available for this game.")
+        return
 
-    print()
-    print("=" * 55)
-    print(f"  Wheeling — {name}")
-    print("=" * 55)
-    print()
-    print("  Wheeling generates multiple tickets from a chosen pool")
-    print("  of numbers, guaranteeing certain match levels.")
-    print()
-    print(f"  [1] Full wheel   — every possible combination")
-    print(f"  [2] Key number   — one number in every ticket")
-    print(f"  [3] Skip")
-    print()
-
-    while True:
-        wc = input("  Enter 1, 2, or 3: ").strip()
-        if wc in ("1","2","3"):
-            break
-        print("  Please enter 1, 2, or 3.")
-
-    if wc == "3":
-        return []
-
-    # ── Collect the wheel pool ────────────────────────────────────────────────
-    print()
-    if wc == "1":
-        min_pool = picks + 1
-        max_pool = min(picks + 6, pool)  # Cap at +6 to keep combo count sane
-        print(f"  Choose {min_pool}–{max_pool} numbers to wheel.")
-        print(f"  (More numbers = exponentially more tickets)")
+    # Load draws with dates if available
+    dated_draws = []
+    if game.get("csv"):
+        csv_path = os.path.join(script_dir, game["csv"])
+        try:
+            with open(csv_path, newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                fieldnames = reader.fieldnames or []
+                has_date = "Draw_Date" in fieldnames
+                for row in reader:
+                    try:
+                        nums = tuple(sorted(
+                            int(row[f"N{i}"]) for i in range(1, picks + 1)
+                        ))
+                        date = row.get("Draw_Date", "") if has_date else ""
+                        dated_draws.append((nums, date))
+                    except:
+                        continue
+        except:
+            dated_draws = [(d, "") for d in draws]
     else:
-        min_pool = picks
-        max_pool = min(picks + 8, pool)
-        print(f"  Choose {min_pool}–{max_pool} numbers for the key-number wheel.")
+        dated_draws = [(d, "") for d in draws]
 
-    wheel_pool = []
-    print(f"  Enter numbers 1–{pool}, one at a time. Press Enter to finish.")
     print()
-    while len(wheel_pool) < max_pool:
-        raw = input(f"  Number {len(wheel_pool)+1}: ").strip()
-        if raw == "" and len(wheel_pool) >= min_pool:
-            break
-        if raw == "" and len(wheel_pool) < min_pool:
-            print(f"  Need at least {min_pool} numbers.")
-            continue
-        if raw.isdigit() and 1 <= int(raw) <= pool:
-            n = int(raw)
-            if n not in wheel_pool:
-                wheel_pool.append(n)
-                print(f"  Added {n}  ({len(wheel_pool)} so far)")
-            else:
-                print(f"  {n} already in pool.")
-        else:
-            print(f"  Please enter a number between 1 and {pool}.")
-
-    if len(wheel_pool) < min_pool:
-        print("  Not enough numbers entered. Skipping wheel.")
-        return []
-
-    # ── Full wheel ────────────────────────────────────────────────────────────
-    if wc == "1":
-        from itertools import combinations as _comb
-        combos = list(_comb(sorted(wheel_pool), picks))
-        print()
-        print(f"  Full wheel of {len(wheel_pool)} numbers = {len(combos):,} tickets.")
-        if len(combos) > 200:
-            print(f"  Warning: that\'s {len(combos):,} tickets — this may be expensive!")
-        confirm = input("  Generate all? (Y/N): ").strip().upper()
-        if confirm != "Y":
-            print("  Wheel cancelled.")
-            return []
-        return [tuple(c) for c in combos]
-
-    # ── Key-number wheel ──────────────────────────────────────────────────────
-    # Pick the key number (must already be in pool)
+    print("=" * 55)
+    print(f"  Have My Numbers Ever Won? — {name}")
+    print(f"  Checking against {n:,} historical draws")
+    print("=" * 55)
+    print(f"\n  Enter up to {picks} numbers (1-{pool}), separated by commas.")
+    print(f"  Example: 7, 14, 22, 35, 41, 48")
     print()
-    print(f"  Your wheel pool: {', '.join(str(n) for n in sorted(wheel_pool))}")
-    print(f"  Choose one KEY number that will appear in every ticket.")
+
     while True:
-        raw = input("  Key number: ").strip()
-        if raw.isdigit() and int(raw) in wheel_pool:
-            key = int(raw)
+        raw = input("  Your numbers: ").strip()
+        if not raw:
+            return
+        try:
+            user_nums = [int(x.strip()) for x in raw.split(",")]
+            if not user_nums:
+                raise ValueError
+            if not all(lo <= n <= pool for n in user_nums):
+                print(f"  All numbers must be between {lo} and {pool}.")
+                continue
+            if len(user_nums) != len(set(user_nums)):
+                print("  Please enter unique numbers — no duplicates.")
+                continue
+            if len(user_nums) > picks:
+                print(f"  Maximum {picks} numbers for {name}.")
+                continue
             break
-        print(f"  Please enter a number from your pool.")
+        except ValueError:
+            print("  Please enter valid numbers separated by commas.")
 
-    from itertools import combinations as _comb
-    rest = [n for n in wheel_pool if n != key]
-    combos = [tuple(sorted([key] + list(c))) for c in _comb(rest, picks - 1)]
+    user_set  = set(user_nums)
+    user_tuple = tuple(sorted(user_nums))
+    checking  = len(user_nums)
+
     print()
-    print(f"  Key-number wheel: {key} fixed + "
-          f"{picks-1} from remaining {len(rest)} = {len(combos):,} tickets.")
-    confirm = input("  Generate all? (Y/N): ").strip().upper()
-    if confirm != "Y":
-        print("  Wheel cancelled.")
-        return []
-    return combos
+    print(f"  Checking {checking} number(s): "
+          f"{', '.join(str(n) for n in sorted(user_nums))}")
+    print("  " + "-" * 51)
+
+    # ── Exact match ───────────────────────────────────────────────────────────
+    if checking == picks:
+        exact = [(d, date) for d, date in dated_draws if d == user_tuple]
+        if exact:
+            print(f"\n  EXACT MATCH ({picks}/{picks} numbers):")
+            print(f"  This exact combination has been drawn {len(exact)} time(s)!")
+            for draw, date in exact[:5]:
+                date_str = f"  {date}" if date else ""
+                print(f"    {' - '.join(f'{n:>2}' for n in draw)}{date_str}")
+        else:
+            print(f"\n  EXACT MATCH ({picks}/{picks}): Never drawn")
+            print(f"  This combination has never appeared in {n:,} draws.")
+
+    # ── Partial matches ───────────────────────────────────────────────────────
+    print()
+    best_match = 0
+    for match_count in range(min(checking, picks), 1, -1):
+        matches = [
+            (d, date) for d, date in dated_draws
+            if len(set(d) & user_set) == match_count
+        ]
+        if matches:
+            best_match = max(best_match, match_count)
+            pct = len(matches) / n * 100
+            print(f"  {match_count} of {checking} matched: "
+                  f"{len(matches):,} draws ({pct:.1f}%)")
+            # Show up to 3 examples for the best matches
+            if match_count >= checking - 1:
+                for draw, date in matches[:3]:
+                    matched = sorted(set(draw) & user_set)
+                    date_str = f"  ({date})" if date else ""
+                    print(f"    {' - '.join(f'{n:>2}' for n in draw)}"
+                          f"  matched: {matched}{date_str}")
+        else:
+            print(f"  {match_count} of {checking} matched: 0 draws")
+
+    # ── Summary ───────────────────────────────────────────────────────────────
+    print()
+    print("  " + "-" * 51)
+    if best_match == picks:
+        print(f"  Best result: JACKPOT — exact match found!")
+    elif best_match > 0:
+        print(f"  Best historical result: {best_match} of {checking} numbers matched")
+    else:
+        print(f"  No historical matches found for these numbers.")
+
+    print()
+    print("  Note: Matching past draws does not affect future")
+    print("  lottery outcomes. Each draw is an independent")
+    print("  random event.")
+    print()
+
 
 # ── Save Results ───────────────────────────────────────────────────────────────
 
 def save_results(game, sets, filters, dataset_label, output_file, locked_nums=None):
-    timestamp    = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    picks        = game["picks"]
-    fmt          = game["format"]
-
-    # ── Plain-text log (original behaviour) ──────────────────────────────────
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(output_file, "a", encoding="utf-8") as f:
         f.write("\n" + "=" * 50 + "\n")
         f.write(f"  Game   : {game['name']}\n")
@@ -1228,27 +1178,6 @@ def save_results(game, sets, filters, dataset_label, output_file, locked_nums=No
         for i, draw in enumerate(sets, 1):
             f.write(f"  Set {i:>2}: {format_draw(draw, game)}\n")
         f.write("-" * 50 + "\n")
-
-    # ── CSV export (new) ──────────────────────────────────────────────────────
-    csv_file = output_file.replace(".txt", "_picks.csv")
-    file_exists = os.path.exists(csv_file)
-    with open(csv_file, "a", newline="", encoding="utf-8") as cf:
-        writer = csv.writer(cf)
-        if not file_exists:
-            # Header row
-            num_cols = [f"N{i}" for i in range(1, picks + 1)]
-            extras   = [] if fmt == "pick" else ["Sum", "Spread", "Odds", "Evens"]
-            writer.writerow(["Timestamp", "Game", "Dataset", "Set"] + num_cols + extras)
-        for i, draw in enumerate(sets, 1):
-            num_vals = list(draw)
-            if fmt == "pick":
-                extras = []
-            else:
-                odds   = sum(1 for n in draw if n % 2 != 0)
-                extras = [sum(draw), max(draw) - min(draw), odds, picks - odds]
-            writer.writerow([timestamp, game["name"], dataset_label, i] + num_vals + extras)
-
-    return csv_file
 
 
 # ── Add Custom Game ────────────────────────────────────────────────────────────
@@ -1360,15 +1289,15 @@ def add_custom_game(script_dir):
 # ── Game Loading ───────────────────────────────────────────────────────────────
 
 def load_game_draws(game, script_dir):
-    """Load draws for a game config. Returns (draws, draw_dates)."""
+    """Load draws for a game config. Returns [] if no CSV or file missing."""
     if not game.get("csv"):
-        return [], {}
+        return []
     path = os.path.join(script_dir, game["csv"])
     if not os.path.exists(path):
-        return [], {}
+        return []
     print(f"\n  Loading {game['name']} data...")
-    draws, draw_dates = load_csv(path, game["picks"], game["pool"], game["format"])
-    return draws, draw_dates
+    draws = load_csv(path, game["picks"], game["pool"], game["format"])
+    return draws
 
 
 # ── Menu Helpers ───────────────────────────────────────────────────────────────
@@ -1394,7 +1323,7 @@ def print_main_menu(custom_games):
 
     print()
     print("  [S] View Stats")
-    print("  [W] Wheel numbers")
+    print("  [C] Check My Numbers")
     print("  [A] Add a custom game")
     print("  [Q] Quit")
     print()
@@ -1402,7 +1331,7 @@ def print_main_menu(custom_games):
 
 def get_valid_choices(custom_games):
     choices = list(BUILTIN_GAMES.keys()) + list(custom_games.keys())
-    choices += ["S","W","A","Q"]
+    choices += ["S","C","A","Q"]
     return choices
 
 
@@ -1411,12 +1340,12 @@ def get_valid_choices(custom_games):
 def main():
     script_dir  = os.path.dirname(os.path.abspath(__file__))
     output_file = os.path.join(script_dir, "lotto_results.txt")
-    draw_cache  = {}  # key -> (draws, draw_dates)
+    draw_cache  = {}  # key -> draws list
 
     def get_draws(key, game):
         if key not in draw_cache:
-            draws, draw_dates = load_game_draws(game, script_dir)
-            draw_cache[key] = (draws, draw_dates)
+            draws = load_game_draws(game, script_dir)
+            draw_cache[key] = draws
         return draw_cache[key]
 
     while True:
@@ -1435,6 +1364,24 @@ def main():
             print("\n  Good luck! 🍀")
             input("  Press Enter to close...")
             break
+
+        # ── Check My Numbers ───────────────────────────────────────────────────
+        if choice == "C":
+            print("\n  Which game would you like to check numbers for?")
+            all_games = {**BUILTIN_GAMES, **custom_games}
+            for k, g in all_games.items():
+                print(f"  [{k}] {g['name']}")
+            print()
+            while True:
+                cc = input("  Enter game key: ").strip().upper()
+                if cc in all_games:
+                    break
+                print("  Please enter a valid game key.")
+            game  = all_games[cc]
+            draws = get_draws(cc, game)
+            check_my_numbers(draws, game, script_dir)
+            input("  Press Enter to return to the main menu...")
+            continue
 
         # ── Add Custom Game ────────────────────────────────────────────────────
         if choice == "A":
@@ -1456,7 +1403,7 @@ def main():
                 print("  Please enter a valid game key.")
 
             game  = all_games[sc]
-            draws, draw_dates = get_draws(sc, game)
+            draws = get_draws(sc, game)
 
             if not draws:
                 print(f"\n  No historical data for {game['name']}.")
@@ -1464,7 +1411,13 @@ def main():
                 input("\n  Press Enter to return to the main menu...")
                 continue
 
-            active_draws, dataset_label = ask_dataset(draws, game["name"], draw_dates)
+            # Lotto MAX: offer source selection before dataset slice
+            if sc == "2":
+                draws, source_label = ask_lotto_max_source(script_dir, draws)
+            else:
+                source_label = game["name"]
+
+            active_draws, dataset_label = ask_dataset(draws, source_label)
             if active_draws is None:
                 active_draws = draws
                 dataset_label = f"All {len(draws):,} draws"
@@ -1474,54 +1427,16 @@ def main():
             input("  Press Enter to return to the main menu...")
             continue
 
-        # ── Wheel Numbers ──────────────────────────────────────────────────────
-        if choice == "W":
-            all_games = {**BUILTIN_GAMES, **custom_games}
-            print("\n  Which game would you like to wheel for?")
-            for k, g in all_games.items():
-                print(f"  [{k}] {g['name']}")
-            print()
-            while True:
-                wk = input("  Enter game key: ").strip().upper()
-                if wk in all_games:
-                    break
-                print("  Please enter a valid game key.")
-
-            game        = all_games[wk]
-            wheel_sets  = ask_wheel(game, script_dir)
-
-            if wheel_sets:
-                print()
-                print(f"  Generated {len(wheel_sets):,} wheeled ticket(s) for {game['name']}:")
-                print("  " + "-" * 51)
-                for i, draw in enumerate(wheel_sets, 1):
-                    line = f"  Ticket {i:>4}: {format_draw(draw, game)}"
-                    if game["format"] != "pick":
-                        odds   = sum(1 for n in draw if n % 2 != 0)
-                        spread = max(draw) - min(draw)
-                        total  = sum(draw)
-                        picks  = game["picks"]
-                        line  += f"  (sum={total}, spread={spread}, {odds}o/{picks-odds}e)"
-                    print(line)
-                print("  " + "-" * 51)
-
-                dummy_filters = {
-                    "sum_min": 0, "sum_max": 9999,
-                    "spread_min": 0, "spread_max": 999,
-                    "odd_min": 0, "odd_max": game["picks"],
-                }
-                csv_out = save_results(game, wheel_sets, dummy_filters,
-                                       "Wheel", output_file)
-                print(f"\n  Results saved to : {output_file}")
-                print(f"  CSV also saved to: {csv_out}")
-
-            input("\n  Press Enter to return to the main menu...")
-            continue
-
         # ── Generate Numbers ───────────────────────────────────────────────────
         all_games = {**BUILTIN_GAMES, **custom_games}
         game      = all_games[choice]
-        draws, draw_dates = get_draws(choice, game)
+        draws     = get_draws(choice, game)
+
+        # Lotto MAX: offer source selection before dataset slice
+        if choice == "2" and draws:
+            draws, source_label = ask_lotto_max_source(script_dir, draws)
+        else:
+            source_label = game["name"]
 
         if not draws:
             print(f"\n  No historical data found for {game['name']}.")
@@ -1529,7 +1444,7 @@ def main():
             dataset_label = "Pure probability"
             active_draws  = None
         else:
-            active_draws, dataset_label = ask_dataset(draws, game["name"], draw_dates)
+            active_draws, dataset_label = ask_dataset(draws, source_label)
 
         # Build frequency
         if active_draws is None:
@@ -1636,9 +1551,8 @@ def main():
             print("\n  Disclaimer: For entertainment only. Lottery draws")
             print("  are independent random events. Good luck! 🍀")
 
-            csv_out = save_results(game, sets, filters, dataset_label, output_file, locked_nums)
-            print(f"\n  Results saved to : {output_file}")
-            print(f"  CSV also saved to: {csv_out}")
+            save_results(game, sets, filters, dataset_label, output_file, locked_nums)
+            print(f"\n  Results saved to: {output_file}")
 
             # ── What next? ─────────────────────────────────────────────────────
             print()
@@ -1662,9 +1576,12 @@ def main():
             elif again == "3":
                 break
             elif again == "2":
-                # Re-ask dataset
+                # Re-ask dataset — for Lotto MAX re-offer source selection too
+                if choice == "2" and draws:
+                    draws, source_label = ask_lotto_max_source(script_dir,
+                                             get_draws(choice, game))
                 if draws:
-                    active_draws, dataset_label = ask_dataset(draws, game["name"], draw_dates)
+                    active_draws, dataset_label = ask_dataset(draws, source_label)
                 if active_draws is None:
                     freq   = build_uniform_frequency(game["pool"], game["format"])
                     if draws:

@@ -1,0 +1,98 @@
+/* ============================================================
+   LottoIQ — Responsive Breakpoints
+   All @media overrides live here. Three breakpoints:
+     Desktop  > 720px   (base styles — no override needed)
+     Tablet   ≤ 720px
+     Mobile   ≤ 480px
+   ============================================================ */
+
+/* ── Tablet & below (≤ 720px) ── */
+@media (max-width: 720px) {
+
+  /* Hero */
+  .hero {
+    padding: 30px 16px 24px;
+  }
+
+  .stat-card-value {
+    font-size: 30px;
+  }
+
+  /* Page body */
+  .page-body {
+    padding: 24px 16px 60px;
+  }
+
+  /* Generator */
+  .generator-header,
+  .generator-body {
+    padding: 18px;
+  }
+
+  /* Upgrade banner */
+  .upgrade-banner {
+    padding: 18px;
+  }
+
+  /* Draw table — horizontal scroll on narrow screens */
+  .draw-table-wrap {
+    overflow-x: auto;
+  }
+
+  .draw-table {
+    min-width: 480px;
+  }
+}
+
+/* ── Hot/Cold two-column collapse ── */
+/* Kept at 580px to match original design intent */
+@media (max-width: 580px) {
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Mobile (≤ 480px) ── */
+@media (max-width: 480px) {
+
+  /* Nav — hide upgrade pill, keep badge + avatar */
+  .nav-upgrade {
+    display: none;
+  }
+
+  /* Hero title */
+  .hero h1 {
+    font-size: 26px;
+  }
+
+  /* Stat strip — 2 columns on small phones */
+  .stat-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Pattern grid — 2 columns */
+  .pattern-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Generator filters — single column */
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Heatmap — tighter gap on very small screens */
+  .heatmap-grid {
+    gap: 3px;
+  }
+
+  /* Upgrade banner — stack vertically */
+  .upgrade-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .upgrade-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

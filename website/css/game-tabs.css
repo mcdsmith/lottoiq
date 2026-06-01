@@ -1,0 +1,40 @@
+/* ============================================================
+   LottoIQ — Game Tabs
+   Horizontal scrolling tab bar for switching between games.
+   ============================================================ */
+
+.game-tabs {
+  background: var(--navy-2);
+  border-bottom: 1px solid var(--navy-4);
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;       /* Firefox */
+  padding: 0 20px;
+}
+
+.game-tabs::-webkit-scrollbar {
+  display: none;               /* Chrome / Safari */
+}
+
+.game-tab {
+  flex-shrink: 0;
+  padding: 13px 18px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-dim);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.game-tab:hover {
+  color: var(--text-muted);
+}
+
+.game-tab.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+  font-weight: 500;
+}

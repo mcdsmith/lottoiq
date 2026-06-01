@@ -1,0 +1,488 @@
+/* ============================================================
+   LottoIQ — Smart Number Generator
+   Filter controls, generate button, and result display.
+   ============================================================ */
+
+.generator-wrap {
+  background: var(--navy-2);
+  border: 1px solid var(--gold-bd);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* Header bar */
+.generator-header {
+  background: linear-gradient(135deg, #0D1225 0%, #0A0E1A 100%);
+  border-bottom: 1px solid var(--gold-bd);
+  padding: 22px 26px;
+}
+
+.generator-header h2 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.generator-header p {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Body */
+.generator-body {
+  padding: 22px 26px;
+}
+
+/* Filter grid */
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.filter-group label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.filter-input {
+  background: var(--navy-3);
+  border: 1px solid var(--navy-4);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 8px 10px;
+  width: 70px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.filter-input:focus {
+  border-color: var(--gold);
+}
+
+.filter-select {
+  background: var(--navy-3);
+  border: 1px solid var(--navy-4);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s;
+  cursor: pointer;
+}
+
+.filter-select:focus {
+  border-color: var(--gold);
+}
+
+.filter-text {
+  background: var(--navy-3);
+  border: 1px solid var(--navy-4);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 8px 10px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.filter-text:focus {
+  border-color: var(--gold);
+}
+
+.filter-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.filter-to {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* Locked filter group (Insider-only) */
+.filter-locked label {
+  opacity: 0.45;
+}
+
+.filter-locked .filter-select,
+.filter-locked .filter-input,
+.filter-locked .filter-text {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* "Insider" badge inside a locked label */
+.locked-badge {
+  display: inline-block;
+  font-size: 10px;
+  background: rgba(74, 85, 104, 0.3);
+  border: 1px solid var(--text-dim);
+  color: var(--text-dim);
+  padding: 1px 7px;
+  border-radius: 10px;
+  margin-left: 6px;
+  vertical-align: middle;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+/* Action row */
+.gen-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+/* ── Result Area ── */
+.result-area {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--navy-4);
+  display: none;
+}
+
+.result-area.visible {
+  display: block;
+  animation: fadeUp 0.25s ease;
+}
+
+.result-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.result-balls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+/* Individual generated ball */
+.result-ball {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Staggered pop-in delays */
+.result-ball:nth-child(1) { animation-delay: 0.04s; }
+.result-ball:nth-child(2) { animation-delay: 0.09s; }
+.result-ball:nth-child(3) { animation-delay: 0.14s; }
+.result-ball:nth-child(4) { animation-delay: 0.19s; }
+.result-ball:nth-child(5) { animation-delay: 0.24s; }
+.result-ball:nth-child(6) { animation-delay: 0.29s; }
+.result-ball:nth-child(7) { animation-delay: 0.34s; }
+
+/* Bonus ball */
+.result-ball.bonus {
+  background: transparent;
+  border: 2px solid var(--gold);
+  color: var(--gold);
+  position: relative;
+}
+
+.result-ball.bonus::after {
+  content: 'B';
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-weight: 400;
+}
+
+/* "Why this set" explanation box */
+.why-box {
+  background: var(--navy-3);
+  border: 1px solid var(--navy-4);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+.why-box strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Save / Copy action buttons */
+.result-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.result-btn {
+  background: transparent;
+  border: 1px solid var(--navy-4);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 12px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.result-btn:hover {
+  border-color: var(--navy-5);
+  color: var(--text);
+}
+
+/* Disclaimer shown after a result is generated */
+.generator-disclaimer {
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-style: italic;
+  line-height: 1.5;
+  border-top: 1px solid var(--navy-4);
+  padding-top: 12px;
+}
+
+
+/* ── Auto / Manual mode toggle ──────────────────────────────── */
+
+.gen-mode-wrap {
+  display:       flex;
+  align-items:   center;
+  gap:           12px;
+  margin-bottom: 20px;
+}
+
+.gen-mode-tabs {
+  display:       flex;
+  background:    var(--navy-3);
+  border-radius: var(--radius);
+  padding:       3px;
+}
+
+.gen-mode-tab {
+  padding:       7px 22px;
+  font-family:   var(--font-display);
+  font-size:     13px;
+  font-weight:   700;
+  border-radius: calc(var(--radius) - 2px);
+  cursor:        pointer;
+  color:         var(--text-dim);
+  transition:    background 0.15s, color 0.15s;
+  user-select:   none;
+}
+
+.gen-mode-tab.active {
+  background: var(--gold);
+  color:      var(--navy);
+}
+
+.gen-mode-tab:not(.active):hover {
+  color:      var(--text);
+  background: var(--navy-4);
+}
+
+
+/* ── Dataset hints ───────────────────────────────────────────── */
+/* Shown below each filter in Auto mode — matches .filter-hint style */
+
+.gen-hint-wrap {
+  min-height: 14px;
+  margin-top: 5px;
+}
+
+.gen-hint {
+  font-size:      11px;
+  font-family:    var(--font-mono);
+  color:          var(--gold);
+  letter-spacing: 0.03em;
+}
+
+
+/* ── Multi-set result cards ──────────────────────────────────── */
+
+.multi-sets-wrap {
+  display:        flex;
+  flex-direction: column;
+  gap:            16px;
+  margin-bottom:  16px;
+}
+
+.result-set-card {
+  background:    var(--navy-2);
+  border:        1px solid var(--navy-4);
+  border-radius: var(--radius-lg);
+  padding:       18px 20px;
+}
+
+.result-set-card .result-label {
+  font-family:    var(--font-mono);
+  font-size:      11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color:          var(--text-dim);
+  margin-bottom:  12px;
+}
+
+.result-set-card .result-balls {
+  display:       flex;
+  flex-wrap:     wrap;
+  gap:           8px;
+  margin-bottom: 12px;
+}
+
+.result-set-card .why-box {
+  font-size:     12px;
+  color:         var(--text-muted);
+  margin-bottom: 10px;
+  line-height:   1.6;
+}
+
+.result-set-card .result-actions {
+  justify-content: flex-start;
+}
+
+.gen-fail-notice {
+  background:    rgba(255,100,50,0.08);
+  border:        1px solid rgba(255,100,50,0.2);
+  border-radius: var(--radius);
+  padding:       12px 16px;
+  font-size:     13px;
+  color:         #ff9070;
+}
+
+
+/* ── Checkbox filter label ───────────────────────────────────── */
+
+.checkbox-label {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  font-size:   13px;
+  color:       var(--text);
+  cursor:      pointer;
+  padding:     8px 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width:         16px;
+  height:        16px;
+  accent-color:  var(--gold);
+  cursor:        pointer;
+  flex-shrink:   0;
+}
+
+.checkbox-label input[type="checkbox"]:disabled {
+  opacity: 0.4;
+  cursor:  not-allowed;
+}
+
+
+/* ── My Numbers ─────────────────────────────────────────────── */
+
+.my-numbers-wrap {
+  display:   flex;
+  gap:       6px;
+  align-items: center;
+}
+
+.my-numbers-wrap .filter-text {
+  flex: 1;
+}
+
+.my-numbers-save,
+.my-numbers-clear {
+  background:    var(--navy-3);
+  border:        1px solid var(--navy-4);
+  border-radius: 6px;
+  color:         var(--text-muted);
+  font-family:   var(--font-body);
+  font-size:     12px;
+  padding:       8px 10px;
+  cursor:        pointer;
+  white-space:   nowrap;
+  transition:    all 0.15s;
+  flex-shrink:   0;
+}
+
+.my-numbers-save:hover  { border-color: var(--gold); color: var(--gold); }
+.my-numbers-clear:hover { border-color: #ff8080; color: #ff8080; }
+
+.my-numbers-save:disabled,
+.my-numbers-clear:disabled {
+  opacity: 0.4;
+  cursor:  not-allowed;
+}
+
+.my-numbers-hint {
+  min-height: 14px;
+  margin-top: 5px;
+}
+
+
+/* ── Set Analysis explanation box ───────────────────────────── */
+
+.explain-list {
+  margin:     10px 0 0 0;
+  padding:    0 0 0 18px;
+  list-style: disc;
+  line-height: 1.7;
+  font-size:  13px;
+  color:      var(--text-muted);
+}
+
+.explain-list li { margin-bottom: 3px; }
+.explain-list li strong { color: var(--text); font-weight: 500; }
+
+.explain-list .explain-footer {
+  list-style:  none;
+  margin-left: -18px;
+  margin-top:  10px;
+  padding-top: 8px;
+  border-top:  1px solid var(--navy-4);
+  font-size:   11px;
+  font-style:  italic;
+  color:       var(--text-dim);
+}

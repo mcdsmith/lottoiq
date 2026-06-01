@@ -1,0 +1,41 @@
+/* ============================================================
+   LottoIQ — Design Tokens
+   Single source of truth for all colours, fonts, and radii.
+   Every other CSS file references these variables.
+   ============================================================ */
+
+:root {
+  /* Backgrounds */
+  --navy:     #0A0E1A;
+  --navy-2:   #13192B;
+  --navy-3:   #1A2240;
+  --navy-4:   #202A45;
+  --navy-5:   #2D3A5A;
+
+  /* Brand gold */
+  --gold:     #FFD700;
+  --gold-dim: #CCAC00;
+  --gold-glow: rgba(255, 215, 0, 0.12);
+  --gold-bd:   rgba(255, 215, 0, 0.22);
+
+  /* Text */
+  --text:       #FFFFFF;
+  --text-muted: #BFBFBF;
+  --text-dim:   #5A6480;
+
+  /* Accent */
+  --hot:      #FF6B35;
+  --cold-clr: #4A9EFF;
+
+  /* Shape */
+  --radius:    10px;
+  --radius-lg: 16px;
+
+  /* Fonts */
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-body:    'Inter', sans-serif;
+  --font-mono:    'DM Mono', monospace;
+
+  /* Layout */
+  --max-width: 1100px;
+}

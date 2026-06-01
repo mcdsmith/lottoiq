@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign In — LottoIQ</title>
+  <meta name="robots" content="noindex, nofollow"/>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <!-- Memberstack -->
+  <script async
+    data-memberstack-app="app_cmpg8yz3h001h0slnha1cbudp"
+    src="https://static.memberstack.com/scripts/v1/memberstack.js">
+  </script>
+
+  <link rel="stylesheet" href="/css/tokens.css"/>
+  <link rel="stylesheet" href="/css/base.css"/>
+
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .signin-wrap {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .signin-logo {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 26px;
+      color: var(--gold);
+      text-align: center;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .signin-logo span { color: var(--text); }
+
+    .signin-tagline {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+    }
+
+    .signin-card {
+      background: var(--navy-2);
+      border: 1px solid var(--navy-4);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+    }
+
+    /* ── Mode tabs ─────────────────────────────────────────── */
+    .mode-tabs {
+      display: flex;
+      gap: 0;
+      background: var(--navy-3);
+      border-radius: var(--radius);
+      padding: 3px;
+      margin-bottom: 28px;
+    }
+
+    .mode-tab {
+      flex: 1;
+      text-align: center;
+      padding: 8px 12px;
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: calc(var(--radius) - 2px);
+      cursor: pointer;
+      color: var(--text-dim);
+      transition: background 0.15s, color 0.15s;
+      user-select: none;
+    }
+
+    .mode-tab.active {
+      background: var(--navy-4);
+      color: var(--text);
+    }
+
+    /* ── Form fields ───────────────────────────────────────── */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .form-group input {
+      width: 100%;
+      background: var(--navy-3);
+      border: 1px solid var(--navy-4);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus { border-color: var(--gold); }
+
+    /* ── Signup-only fields (hidden in signin mode) ────────── */
+    .signup-only { display: none; }
+    body.mode-signup .signup-only { display: block; }
+    body.mode-signup .signin-only { display: none; }
+
+    /* ── Submit button ─────────────────────────────────────── */
+    .signin-btn {
+      width: 100%;
+      background: var(--gold);
+      color: var(--navy);
+      border: none;
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 700;
+      padding: 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.15s;
+      letter-spacing: -0.01em;
+    }
+
+    .signin-btn:hover    { opacity: 0.9; }
+    .signin-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ── Alert box (error + success) ──────────────────────── */
+    .signin-alert {
+      border-radius: var(--radius);
+      font-size: 13px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .signin-alert.error {
+      background: rgba(255, 80, 80, 0.1);
+      border: 1px solid rgba(255, 80, 80, 0.3);
+      color: #ff8080;
+    }
+
+    .signin-alert.success {
+      background: rgba(80, 200, 80, 0.1);
+      border: 1px solid rgba(80, 200, 80, 0.3);
+      color: #80e080;
+    }
+
+    /* ── Footer links ──────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--navy-4);
+      margin: 20px 0;
+    }
+
+    .forgot-link {
+      display: block;
+      text-align: right;
+      font-size: 12px;
+      color: var(--text-dim);
+      text-decoration: none;
+      margin-top: -8px;
+      margin-bottom: 16px;
+      cursor: pointer;
+    }
+
+    .forgot-link:hover { color: var(--text-muted); }
+
+    .signin-footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    .signin-footer a {
+      color: var(--gold);
+      text-decoration: none;
+    }
+
+    .signin-footer a:hover { text-decoration: underline; }
+
+    /* ── Plan badge on signup card ─────────────────────────── */
+    .plan-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--navy-3);
+      border: 1px solid var(--navy-4);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .plan-badge strong { color: var(--text); }
+  </style>
+</head>
+<body class="mode-signin">
+
+<div class="signin-wrap">
+
+  <div class="signin-logo">Lotto<span>IQ</span>.ca</div>
+  <div class="signin-tagline">Member analytics portal</div>
+
+  <div class="signin-card">
+
+    <!-- Mode toggle tabs -->
+    <div class="mode-tabs">
+      <div class="mode-tab active" id="tabSignin">Sign In</div>
+      <div class="mode-tab" id="tabSignup">Create Account</div>
+    </div>
+
+    <!-- Alert box — shared between both modes -->
+    <div class="signin-alert" id="signinAlert"></div>
+
+    <!-- ── SIGN UP only: plan badge ── -->
+    <div class="signup-only plan-badge">
+      ✓ <strong>Standard plan</strong> — free, no credit card required
+    </div>
+
+    <!-- First name — signup only -->
+    <div class="form-group signup-only">
+      <label for="firstName">First name</label>
+      <input type="text" id="firstName" placeholder="Your first name" autocomplete="given-name"/>
+    </div>
+
+    <!-- Email — both modes -->
+    <div class="form-group">
+      <label for="email">Email address</label>
+      <input type="email" id="email" placeholder="you@example.com" autocomplete="email"/>
+    </div>
+
+    <!-- Password — both modes -->
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+
+    <!-- Confirm password — signup only -->
+    <div class="form-group signup-only">
+      <label for="confirmPassword">Confirm password</label>
+      <input type="password" id="confirmPassword" placeholder="••••••••" autocomplete="new-password"/>
+    </div>
+
+    <!-- Forgot password — signin only -->
+    <a class="forgot-link signin-only" id="forgotLink">Forgot your password?</a>
+
+    <!-- Submit button -->
+    <button class="signin-btn" id="submitBtn">Sign In</button>
+
+    <hr class="divider"/>
+
+    <!-- Footer -->
+    <div class="signin-footer signin-only">
+      Want to upgrade to Insider? <a href="https://lottoiq.ca/#pricing">View plans →</a>
+    </div>
+    <div class="signin-footer signup-only">
+      By creating an account you agree to our
+      <a href="https://lottoiq.ca/terms" target="_blank">Terms of Service</a>.<br>
+      Already have an account? <a href="#" id="switchToSignin">Sign in →</a>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+  const PLAN_STANDARD = 'pln_standard-799f0qlu';
+
+  // ── Get return URL ────────────────────────────────────────
+  function getReturnUrl() {
+    const params   = new URLSearchParams(window.location.search);
+    const ret      = params.get('return');
+    const checkout = params.get('checkout');
+
+    let base = '/games/lotto-649/';
+    if (ret && ret.startsWith('/') && !ret.startsWith('//')) {
+      base = ret;
+    }
+
+    if (checkout === 'monthly' || checkout === 'yearly') {
+      const sep = base.includes('?') ? '&' : '?';
+      return `${base}${sep}checkout=${checkout}`;
+    }
+
+    return base;
+  }
+
+  // ── Wait for Memberstack ──────────────────────────────────
+  async function getMemberstack(maxWait = 5000) {
+    const interval = 100;
+    let elapsed    = 0;
+    while (elapsed < maxWait) {
+      if (window.$memberstackDom) return window.$memberstackDom;
+      await new Promise(r => setTimeout(r, interval));
+      elapsed += interval;
+    }
+    throw new Error('Memberstack did not initialise');
+  }
+
+  // ── If already logged in, redirect immediately ────────────
+  async function checkExistingSession() {
+    try {
+      const ms     = await getMemberstack();
+      const member = await ms.getCurrentMember();
+      if (member && member.data) window.location.href = getReturnUrl();
+    } catch (e) { /* not logged in */ }
+  }
+
+  checkExistingSession();
+
+  // ── Alert helpers ─────────────────────────────────────────
+  function showAlert(msg, type = 'error') {
+    const el = document.getElementById('signinAlert');
+    el.textContent  = msg;
+    el.className    = `signin-alert ${type}`;
+    el.style.display = 'block';
+  }
+
+  function hideAlert() {
+    const el = document.getElementById('signinAlert');
+    el.style.display = 'none';
+    el.className     = 'signin-alert';
+  }
+
+  // ── Mode toggle ───────────────────────────────────────────
+  let currentMode = 'signin';
+
+  function setMode(mode) {
+    currentMode = mode;
+    hideAlert();
+
+    document.body.className      = `mode-${mode}`;
+    document.getElementById('tabSignin').classList.toggle('active', mode === 'signin');
+    document.getElementById('tabSignup').classList.toggle('active', mode === 'signup');
+    document.getElementById('submitBtn').textContent =
+      mode === 'signin' ? 'Sign In' : 'Create Free Account';
+
+    // Reset password autocomplete hint
+    const pw = document.getElementById('password');
+    pw.autocomplete = mode === 'signin' ? 'current-password' : 'new-password';
+    pw.placeholder  = '••••••••';
+  }
+
+  document.getElementById('tabSignin').addEventListener('click', () => setMode('signin'));
+  document.getElementById('tabSignup').addEventListener('click', () => setMode('signup'));
+  document.getElementById('switchToSignin')?.addEventListener('click', e => {
+    e.preventDefault();
+    setMode('signin');
+  });
+
+  // Auto-switch to signup if ?signup=true in URL
+  if (new URLSearchParams(window.location.search).get('signup') === 'true') {
+    setMode('signup');
+  }
+
+  // ── Submit handler ────────────────────────────────────────
+  document.getElementById('submitBtn').addEventListener('click', async () => {
+    hideAlert();
+
+    const btn   = document.getElementById('submitBtn');
+    const email = document.getElementById('email').value.trim();
+    const pw    = document.getElementById('password').value;
+
+    if (!email || !pw) {
+      showAlert('Please fill in all required fields.');
+      return;
+    }
+
+    if (currentMode === 'signup') {
+      // ── Sign up ─────────────────────────────────────────
+      const firstName = document.getElementById('firstName').value.trim();
+      const pwConfirm = document.getElementById('confirmPassword').value;
+
+      if (!firstName) {
+        showAlert('Please enter your first name.');
+        return;
+      }
+
+      if (pw.length < 8) {
+        showAlert('Password must be at least 8 characters.');
+        return;
+      }
+
+      if (pw !== pwConfirm) {
+        showAlert('Passwords do not match.');
+        return;
+      }
+
+      btn.textContent = 'Creating account…';
+      btn.disabled    = true;
+
+      try {
+        const ms = await getMemberstack();
+
+        // Create the member and assign Standard plan
+        await ms.signupMemberEmailPassword({
+          email,
+          password: pw,
+          customFields: { 'first-name': firstName },
+          plans: [{ planId: PLAN_STANDARD }],
+        });
+
+        showAlert('Account created! Taking you to the portal…', 'success');
+        setTimeout(() => { window.location.href = getReturnUrl(); }, 1200);
+
+      } catch (err) {
+        console.error('[signup]', err);
+        const msg = err?.message?.includes('already')
+          ? 'An account with this email already exists. Try signing in.'
+          : 'Could not create account. Please try again.';
+        showAlert(msg);
+        btn.textContent = 'Create Free Account';
+        btn.disabled    = false;
+      }
+
+    } else {
+      // ── Sign in ─────────────────────────────────────────
+      btn.textContent = 'Signing in…';
+      btn.disabled    = true;
+
+      try {
+        const ms = await getMemberstack();
+        await ms.loginMemberEmailPassword({ email, password: pw });
+        window.location.href = getReturnUrl();
+      } catch (err) {
+        console.error('[signin]', err);
+        showAlert('Incorrect email or password. Please try again.');
+        btn.textContent = 'Sign In';
+        btn.disabled    = false;
+      }
+    }
+  });
+
+  // ── Enter key submits ─────────────────────────────────────
+  ['email', 'password', 'confirmPassword', 'firstName'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('submitBtn').click();
+    });
+  });
+
+  // ── Forgot password ───────────────────────────────────────
+  document.getElementById('forgotLink').addEventListener('click', async () => {
+    const email = document.getElementById('email').value.trim();
+    if (!email) {
+      showAlert('Enter your email address above first.');
+      return;
+    }
+    try {
+      const ms = await getMemberstack();
+      await ms.sendMemberResetPasswordEmail({ email });
+      showAlert('Password reset email sent — check your inbox.', 'success');
+    } catch (err) {
+      showAlert('Could not send reset email. Check the address and try again.');
+    }
+  });
+</script>
+
+</body>
+</html>

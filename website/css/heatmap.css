@@ -1,0 +1,82 @@
+/* ============================================================
+   LottoIQ — Heatmap
+   Draw frequency heatmap grid and colour legend.
+   ============================================================ */
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+/* Rounded rectangle / squircle shape — wider than tall */
+.hm-ball {
+  border-radius:   14px;
+  padding:         10px 4px;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  font-family:     var(--font-body);
+  font-size:       clamp(10px, 1.5vw, 14px);
+  font-weight:     500;
+  cursor:          default;
+  position:        relative;
+  transition:      transform 0.12s;
+  width:           55%;
+  margin:          0 auto;
+}
+
+.hm-ball:hover {
+  transform: scale(1.18);
+  z-index: 10;
+}
+
+/* Tooltip shown on hover */
+.hm-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--navy-4);
+  border: 1px solid var(--navy-5);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+  z-index: 20;
+  pointer-events: none;
+  color: var(--text);
+}
+
+.hm-ball:hover .hm-tooltip {
+  display: block;
+}
+
+/* ── Colour legend — row of small circles ── */
+.hm-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hm-legend-dots {
+  display:     flex;
+  align-items: center;
+  gap:         6px;
+  flex:        1;
+}
+
+.hm-legend-dot {
+  width:         14px;
+  height:        14px;
+  border-radius: 50%;
+  flex-shrink:   0;
+}
