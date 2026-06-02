@@ -4,8 +4,9 @@
 
 [build]
   publish   = "website"
-  functions = "netlify/functions"
-
+  functions = "website/netlify/functions"
+  command	= ""
+ 
 [functions]
   node_bundler = "esbuild"
 
