@@ -3,7 +3,7 @@
 # ============================================================
 
 [build]
-  publish   = "."
+  publish   = "website"
   functions = "netlify/functions"
 
 [functions]
