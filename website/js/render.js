@@ -143,6 +143,19 @@ function renderHotCold(freq) {
   // Update hero stat strip balls
   document.getElementById('statHotBall').textContent  = hot[0][0];
   document.getElementById('statColdBall').textContent = cold[0][0];
+
+  // Update subtitle to reflect the active dataset
+  const datasetLabels = {
+    last30:  'the last 30 draws',
+    last90:  'the last 90 draws',
+    alltime: 'all available draws',
+  };
+  const activeDataset = document.querySelector('.ds-btn.active')?.dataset.dataset || 'last30';
+  const descEl = document.getElementById('hotColdDesc');
+  if (descEl) {
+    const label = datasetLabels[activeDataset] ?? 'the selected draws';
+    descEl.textContent = `Hot numbers have appeared most often in ${label}. Cold numbers have appeared least.`;
+  }
 }
 
 
@@ -195,6 +208,19 @@ function toggleOverdue(el, num) {
 function renderPatternStats(draws, cfg) {
   const stats = computePatternStats(draws, cfg);
   if (!stats) return;
+
+  // Update subtitle to reflect the active dataset
+  const datasetLabels = {
+    last30:  'the last 30 draws',
+    last90:  'the last 90 draws',
+    alltime: 'all available draws',
+  };
+  const activeDataset = document.querySelector('.ds-btn.active')?.dataset.dataset || 'last30';
+  const descEl = document.getElementById('patternDesc');
+  if (descEl) {
+    const label = datasetLabels[activeDataset] ?? 'the selected draws';
+    descEl.textContent = `Typical characteristics of a winning draw in ${label}.`;
+  }
 
   document.getElementById('statSum').textContent          = stats.avgSum;
   document.getElementById('statOddEven').textContent      = stats.topOddEven;
