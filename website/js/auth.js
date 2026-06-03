@@ -138,6 +138,8 @@ function applyMemberUI(memberData) {
     document.querySelectorAll('.ds-btn.locked').forEach(btn => {
       btn.classList.remove('locked');
       btn.disabled = false;
+      const lockIcon = btn.querySelector('.ds-lock');
+      if (lockIcon) lockIcon.remove();
     });
 
     const datasetNote = document.querySelector('.dataset-note');
@@ -220,6 +222,8 @@ function unlockInsiderUI() {
   document.querySelectorAll('.ds-btn.locked').forEach(btn => {
     btn.classList.remove('locked');
     btn.disabled = false;
+    const lockIcon = btn.querySelector('.ds-lock');
+    if (lockIcon) lockIcon.remove();
   });
 
   // Dataset note
