@@ -376,6 +376,22 @@
     setMode('signup');
   }
 
+  // ── Update plan badge for paid checkout flows ──────────────
+  // When a visitor clicks Subscribe (monthly or yearly) on the
+  // Wix pricing page, they land here with ?checkout=monthly or
+  // ?checkout=yearly. Switch to signup tab and update the badge
+  // so the card reflects the plan they actually clicked on.
+  const checkoutParam = new URLSearchParams(window.location.search).get('checkout');
+  if (checkoutParam === 'monthly' || checkoutParam === 'yearly') {
+    setMode('signup'); // default to signup tab for new paid members
+    const badge = document.querySelector('.plan-badge');
+    if (badge) {
+      badge.innerHTML = checkoutParam === 'yearly'
+        ? '✓ <strong>Insider (Yearly)</strong> — $79.99/year, save $40'
+        : '✓ <strong>Insider (Monthly)</strong> — $9.99/month';
+    }
+  }
+
   // ── Submit handler ────────────────────────────────────────
   document.getElementById('submitBtn').addEventListener('click', async () => {
     hideAlert();
