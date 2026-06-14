@@ -354,7 +354,7 @@ function initCheckMyNumbers(draws, cfg) {
 
     inputs.forEach(inp => {
       const v = parseInt(inp.value);
-      if (!isNaN(v) && v >= 1 && v <= cfg.maxNum) userNums.push(v);
+      if (!isNaN(v) && v >= 0 && v <= cfg.maxNum) userNums.push(v);
     });
 
     // Deduplicate

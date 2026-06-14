@@ -745,7 +745,7 @@ function rowsToDraws(rows, numCols, dateCol, bonusCol, pool) {
   return rows.map(r => {
     const nums = numCols
       .map(c => parseInt(r[c]))
-      .filter(n => !isNaN(n) && n >= 1 && n <= pool)
+      .filter(n => !isNaN(n) && n >= 0 && n <= pool)
       .sort((a, b) => a - b);
 
     return {

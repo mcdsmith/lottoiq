@@ -173,7 +173,7 @@ function generateNumbers() {
 
     // My Numbers — Insider only; always included if saved
     const myNums = loadMyNumbers();
-    myNums.filter(n => n >= 1 && n <= cfg.maxNum).forEach(n => lockedPool.add(n));
+    myNums.filter(n => n >= 0 && n <= cfg.maxNum).forEach(n => lockedPool.add(n));
 
     // Top pair — Insider only; value is "n1-n2" e.g. "12-34"
     const topPairEl = document.getElementById('topPair');
