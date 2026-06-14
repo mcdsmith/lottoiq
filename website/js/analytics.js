@@ -13,9 +13,9 @@
 //
 // Example output: { 1: 4, 2: 7, 3: 2, ... }
 
-function computeFreq(draws, maxNum) {
+function computeFreq(draws, maxNum, minNum = 1) {
   const freq = {};
-  for (let i = 1; i <= maxNum; i++) freq[i] = 0;
+  for (let i = minNum; i <= maxNum; i++) freq[i] = 0;
   draws.forEach(d => {
     d.nums.forEach(n => {
       if (freq[n] !== undefined) freq[n]++;
@@ -37,9 +37,9 @@ function computeFreq(draws, maxNum) {
 //   num   — the ball number
 //   draws — how many draws ago it last appeared
 
-function computeOverdue(draws, maxNum) {
+function computeOverdue(draws, maxNum, minNum = 1) {
   const lastSeen = {};
-  for (let i = 1; i <= maxNum; i++) lastSeen[i] = -1;
+  for (let i = minNum; i <= maxNum; i++) lastSeen[i] = -1;
 
   draws.forEach((d, idx) => {
     d.nums.forEach(n => {
@@ -253,7 +253,7 @@ function renderCheckInputs(cfg) {
     const pill = document.createElement('div');
     pill.className = 'check-pill';
     pill.innerHTML = `
-      <input type="number" min="1" max="${cfg.maxNum}"
+      <input type="number" min="${cfg.minNum ?? 1}" max="${cfg.maxNum}"
              placeholder="${i}" aria-label="Number ${i}"
              class="check-num-input" id="checkNum${i}"/>
       <span class="check-pill-label">#${i}</span>`;
@@ -361,7 +361,7 @@ function initCheckMyNumbers(draws, cfg) {
     const unique = [...new Set(userNums)];
 
     if (unique.length < 2) {
-      alert(`Enter at least 2 numbers between 1 and ${cfg.maxNum}.`);
+      alert(`Enter at least 2 numbers between ${cfg.minNum ?? 1} and ${cfg.maxNum}.`);
       return;
     }
     if (unique.length > cfg.numCols) {

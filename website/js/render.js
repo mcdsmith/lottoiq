@@ -36,7 +36,7 @@ function updateHero(gameKey, draws) {
 
   // Heatmap description updates with correct maxNum for each game
   document.getElementById('heatmapDesc').textContent =
-    `Every number 1–${cfg.maxNum}, shaded by how often it has been drawn. Warmer = more frequent.`;
+    `Every number ${cfg.minNum ?? 1}–${cfg.maxNum}, shaded by how often it has been drawn. Warmer = more frequent.`;
 
   // Draw table description
   document.getElementById('drawTableDesc').textContent =
@@ -58,7 +58,7 @@ function updateHero(gameKey, draws) {
 // Builds the full grid of coloured balls. Colour is
 // interpolated on a cold-blue → warm-gold → hot-orange scale.
 
-function renderHeatmap(freq, maxNum) {
+function renderHeatmap(freq, maxNum, minNum = 1) {
   const vals  = Object.values(freq);
   const min   = Math.min(...vals);
   const max   = Math.max(...vals);
@@ -84,7 +84,7 @@ function renderHeatmap(freq, maxNum) {
   const top3thresh = sortedVals[Math.max(0, sortedVals.length - 3)];
   const bot3thresh = sortedVals[Math.min(sortedVals.length - 1, 2)];
 
-  for (let i = 1; i <= maxNum; i++) {
+  for (let i = minNum; i <= maxNum; i++) {
     const f = freq[i] || 0;
     const t = (f - min) / (max - min || 1); // 0–1
 

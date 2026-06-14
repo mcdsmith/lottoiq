@@ -183,7 +183,7 @@ function generateNumbers() {
 
     if (overdueCount > 0) {
       const allDraws    = allDrawsData[currentGame].map(r => parseRecord(r, cfg.numCols));
-      const overdueNums = computeOverdue(allDraws, cfg.maxNum);
+      const overdueNums = computeOverdue(allDraws, cfg.maxNum, cfg.minNum);
       overdueNums.slice(0, overdueCount).forEach(d => lockedPool.add(d.num));
     }
 
@@ -193,7 +193,7 @@ function generateNumbers() {
       sumMin, sumMax, sumRangeBucket, oddEvenPref, lowHighPref, spreadPref,
       overdueCount, neverAppeared,
       topPair: topPairEl ? topPairEl.value : 'none',
-      myNums:  loadMyNumbers().filter(n => n >= 1 && n <= cfg.maxNum),
+      myNums:  loadMyNumbers().filter(n => n >= 0 && n <= cfg.maxNum),
     };
 
     // ── Generate all sets ───────────────────────────────────
@@ -243,7 +243,7 @@ function generateNumbers() {
         sumMin, sumMax, sumRangeBucket, oddEvenPref, lowHighPref, spreadPref,
         overdueCount, neverAppeared,
         topPair: topPairEl ? topPairEl.value : 'none',
-        myNums:  loadMyNumbers().filter(n => n >= 1 && n <= cfg.maxNum),
+        myNums:  loadMyNumbers().filter(n => n >= 0 && n <= cfg.maxNum),
       };
       document.getElementById('whyBox').innerHTML =
         explainGeneratedSet(nums, _statsDraws, cfg, _filters);
@@ -381,11 +381,11 @@ function renderMyNumbersHint(nums, cfg) {
     hint.textContent = '';
     return;
   }
-  const valid = nums.filter(n => n >= 1 && n <= cfg.maxNum);
+  const valid = nums.filter(n => n >= 0 && n <= cfg.maxNum);
   if (valid.length) {
     hint.innerHTML = `<span class="gen-hint">← always included: ${valid.join(' & ')}</span>`;
   } else {
-    hint.innerHTML = `<span style="color:#ff8080;font-size:11px">Numbers out of range for this game (1–${cfg.maxNum})</span>`;
+    hint.innerHTML = `<span style="color:#ff8080;font-size:11px">Numbers out of range for this game (${cfg.minNum ?? 1}–${cfg.maxNum})</span>`;
   }
 }
 
@@ -410,11 +410,12 @@ function initMyNumbers() {
     const unique = [...new Set(raw)].slice(0, 2); // max 2 numbers
 
     // Validate range
-    const invalid = unique.filter(n => n < 1 || n > cfg.maxNum);
+    const lo = cfg.minNum ?? 1;
+    const invalid = unique.filter(n => n < lo || n > cfg.maxNum);
     const hint    = document.getElementById('myNumbersHint');
 
     if (invalid.length) {
-      if (hint) hint.innerHTML = `<span style="color:#ff8080;font-size:11px">Numbers must be between 1 and ${cfg.maxNum}</span>`;
+      if (hint) hint.innerHTML = `<span style="color:#ff8080;font-size:11px">Numbers must be between ${lo} and ${cfg.maxNum}</span>`;
       return;
     }
 

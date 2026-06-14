@@ -726,16 +726,19 @@ function parseCSV(text) {
   // Auto-detect pool size and picks
   const picks = numCols.length;
   let maxSeen = 0;
+  let minSeen = Infinity;
   rows.forEach(r => {
     numCols.forEach(c => {
       const v = parseInt(r[c]);
       if (!isNaN(v) && v > maxSeen) maxSeen = v;
+      if (!isNaN(v) && v < minSeen) minSeen = v;
     });
   });
+  if (minSeen === Infinity) minSeen = 1;
 
   return {
     headers, numCols, dateCol, bonusCol,
-    picks, poolDetected: maxSeen,
+    picks, poolDetected: maxSeen, minSeen,
     rows,
     drawCount: rows.length,
   };
@@ -758,7 +761,7 @@ function rowsToDraws(rows, numCols, dateCol, bonusCol, pool) {
 }
 
 // ── Build GAME_CONFIG entry for custom game ────────────────────
-function buildCustomConfig(gameName, picks, pool, hasBonus) {
+function buildCustomConfig(gameName, picks, pool, hasBonus, minNum) {
   const sumRange = [
     Math.round(picks * (pool * 0.2)),
     Math.round(picks * (pool * 0.8)),
@@ -769,6 +772,7 @@ function buildCustomConfig(gameName, picks, pool, hasBonus) {
     title:        `${gameName} Statistics & Analysis`,
     sub:          'Based on your uploaded draw data',
     maxNum:       pool,
+    minNum:       minNum,
     numCols:      picks,
     sumRange,
     nextDrawDays: [],
@@ -819,7 +823,7 @@ function runCustomAnalysis() {
   GAME_CONFIG['custom'] = cfg;
 
   const statsDraws = sliceDraws(draws, currentDataset);
-  activeFreq = computeFreq(statsDraws, cfg.maxNum);
+  activeFreq = computeFreq(statsDraws, cfg.maxNum, cfg.minNum);
 
   // Update hero manually (render.js updateHero reads from Airtable format)
   document.getElementById('heroTitle').textContent  = cfg.title;
@@ -828,7 +832,7 @@ function runCustomAnalysis() {
   document.getElementById('statNextDraw').textContent   = cfg.numCols;
   document.getElementById('drawTableDesc').textContent  = `Your uploaded ${cfg.label} draws.`;
   document.getElementById('heatmapDesc').textContent    =
-    `Every number 1–${cfg.maxNum}, shaded by how often it has been drawn. Warmer = more frequent.`;
+    `Every number ${cfg.minNum ?? 1}–${cfg.maxNum}, shaded by how often it has been drawn. Warmer = more frequent.`;
 
   const latest = draws[0]?.date;
   if (latest) {
@@ -843,9 +847,9 @@ function runCustomAnalysis() {
   document.getElementById('sumMax').value = cfg.sumRange[1];
 
   // Render analytics
-  renderHeatmap(activeFreq, cfg.maxNum);
+  renderHeatmap(activeFreq, cfg.maxNum, cfg.minNum);
   renderHotCold(activeFreq);
-  renderOverdue(computeOverdue(draws, cfg.maxNum));
+  renderOverdue(computeOverdue(draws, cfg.maxNum, cfg.minNum));
   renderPatternStats(statsDraws, cfg);
   renderCustomDrawTable(draws);
   initCheckMyNumbers(draws, cfg);
@@ -861,8 +865,8 @@ function runCustomAnalysis() {
       btn.classList.add('active');
 
       const sd = sliceDraws(draws, currentDataset);
-      activeFreq = computeFreq(sd, cfg.maxNum);
-      renderHeatmap(activeFreq, cfg.maxNum);
+      activeFreq = computeFreq(sd, cfg.maxNum, cfg.minNum);
+      renderHeatmap(activeFreq, cfg.maxNum, cfg.minNum);
       renderHotCold(activeFreq);
       renderPatternStats(sd, cfg);
 
@@ -1049,7 +1053,8 @@ document.getElementById('confirmBtn').addEventListener('click', () => {
   document.getElementById('loadingOverlay').style.display = 'flex';
 
   setTimeout(() => {
-    customCfg   = buildCustomConfig(gameName, picks, pool, hasBonus);
+    const minNum = parsedCsvData.minSeen === 0 ? 0 : 1;
+    customCfg   = buildCustomConfig(gameName, picks, pool, hasBonus, minNum);
     customDraws = rowsToDraws(
       parsedCsvData.rows,
       parsedCsvData.numCols,
