@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reset Password — LottoIQ</title>
+  <meta name="robots" content="noindex, nofollow"/>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <link rel="stylesheet" href="/css/tokens.css"/>
+  <link rel="stylesheet" href="/css/base.css"/>
+
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .signin-wrap { width: 100%; max-width: 420px; }
+
+    .signin-logo {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 26px;
+      color: var(--gold);
+      text-align: center;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .signin-logo span { color: var(--text); }
+
+    .signin-tagline {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+    }
+
+    .signin-card {
+      background: var(--navy-2);
+      border: 1px solid var(--navy-4);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .form-group { margin-bottom: 16px; }
+
+    .form-group label {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .form-group input {
+      width: 100%;
+      background: var(--navy-3);
+      border: 1px solid var(--navy-4);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus { border-color: var(--gold); }
+
+    .signin-btn {
+      width: 100%;
+      background: var(--gold);
+      color: var(--navy);
+      border: none;
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 700;
+      padding: 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.15s;
+      letter-spacing: -0.01em;
+    }
+
+    .signin-btn:hover    { opacity: 0.9; }
+    .signin-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .signin-alert {
+      border-radius: var(--radius);
+      font-size: 13px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .signin-alert.error {
+      background: rgba(255, 80, 80, 0.1);
+      border: 1px solid rgba(255, 80, 80, 0.3);
+      color: #ff8080;
+    }
+
+    .signin-alert.success {
+      background: rgba(80, 200, 80, 0.1);
+      border: 1px solid rgba(80, 200, 80, 0.3);
+      color: #80e080;
+    }
+
+    .signin-footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.6;
+      margin-top: 20px;
+    }
+
+    .signin-footer a { color: var(--gold); text-decoration: none; }
+    .signin-footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div class="signin-wrap">
+
+  <div class="signin-logo">Lotto<span>IQ</span>.ca</div>
+  <div class="signin-tagline">Member analytics portal</div>
+
+  <div class="signin-card">
+    <div class="card-title" id="cardTitle">Set a new password</div>
+
+    <div class="signin-alert" id="resetAlert"></div>
+
+    <div id="resetForm">
+      <div class="form-group">
+        <label for="newPassword">New password</label>
+        <input type="password" id="newPassword" placeholder="••••••••" autocomplete="new-password"/>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmNewPassword">Confirm new password</label>
+        <input type="password" id="confirmNewPassword" placeholder="••••••••" autocomplete="new-password"/>
+      </div>
+
+      <button class="signin-btn" id="submitBtn" disabled>Verifying link…</button>
+    </div>
+
+    <div class="signin-footer">
+      <a href="/signin/">← Back to sign in</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL      = 'https://nnhvhqggaxfraqmkkehg.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_QkI9i4nwrYyctRemhsZJWw_lolAkKjK';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const submitBtn = document.getElementById('submitBtn');
+
+  function showAlert(msg, type = 'error') {
+    const el = document.getElementById('resetAlert');
+    el.textContent   = msg;
+    el.className     = `signin-alert ${type}`;
+    el.style.display = 'block';
+  }
+
+  // ── Wait for the recovery session ──────────────────────────
+  // Supabase's client library reads the token out of the URL
+  // hash automatically on load and fires PASSWORD_RECOVERY once
+  // that session is established. Until then, the form stays
+  // disabled so nobody can submit against a not-yet-ready session.
+  let recoveryReady = false;
+
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY' && session) {
+      recoveryReady = true;
+      submitBtn.disabled  = false;
+      submitBtn.textContent = 'Update Password';
+    }
+  });
+
+  // Fallback: if the event already fired before this listener
+  // attached, or the link is simply invalid/expired.
+  setTimeout(() => {
+    if (!recoveryReady) {
+      showAlert('This reset link is invalid or has expired. Please request a new one from the sign-in page.');
+      document.getElementById('resetForm').style.display = 'none';
+    }
+  }, 4000);
+
+  submitBtn.addEventListener('click', async () => {
+    const pw        = document.getElementById('newPassword').value;
+    const pwConfirm = document.getElementById('confirmNewPassword').value;
+
+    if (pw.length < 8) {
+      showAlert('Password must be at least 8 characters.');
+      return;
+    }
+
+    if (pw !== pwConfirm) {
+      showAlert('Passwords do not match.');
+      return;
+    }
+
+    submitBtn.disabled    = true;
+    submitBtn.textContent = 'Updating…';
+
+    try {
+      const { error } = await sb.auth.updateUser({ password: pw });
+      if (error) throw error;
+
+      showAlert('Password updated! Redirecting you to sign in…', 'success');
+      setTimeout(() => { window.location.href = '/signin/'; }, 1500);
+    } catch (err) {
+      console.error('[reset-password]', err);
+      showAlert('Could not update password. Please try requesting a new reset link.');
+      submitBtn.disabled    = false;
+      submitBtn.textContent = 'Update Password';
+    }
+  });
+</script>
+
+</body>
+</html>

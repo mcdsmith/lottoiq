@@ -11,11 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 
-  <!-- Memberstack -->
-  <script async
-    data-memberstack-app="app_cmpg8yz3h001h0slnha1cbudp"
-    src="https://static.memberstack.com/scripts/v1/memberstack.js">
-  </script>
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <link rel="stylesheet" href="/css/tokens.css"/>
   <link rel="stylesheet" href="/css/base.css"/>
@@ -287,7 +284,9 @@
 
 
 <script>
-  const PLAN_STANDARD = 'pln_standard-799f0qlu';
+  const SUPABASE_URL      = 'https://nnhvhqggaxfraqmkkehg.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_QkI9i4nwrYyctRemhsZJWw_lolAkKjK';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // ── Get return URL ────────────────────────────────────────
   function getReturnUrl() {
@@ -308,25 +307,13 @@
     return base;
   }
 
-  // ── Wait for Memberstack ──────────────────────────────────
-  async function getMemberstack(maxWait = 5000) {
-    const interval = 100;
-    let elapsed    = 0;
-    while (elapsed < maxWait) {
-      if (window.$memberstackDom) return window.$memberstackDom;
-      await new Promise(r => setTimeout(r, interval));
-      elapsed += interval;
-    }
-    throw new Error('Memberstack did not initialise');
-  }
-
   // ── If already logged in, redirect immediately ────────────
+  // Also fires after a member clicks the email confirmation
+  // link, since Supabase lands them back on this page with an
+  // active session.
   async function checkExistingSession() {
-    try {
-      const ms     = await getMemberstack();
-      const member = await ms.getCurrentMember();
-      if (member && member.data) window.location.href = getReturnUrl();
-    } catch (e) { /* not logged in */ }
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) window.location.href = getReturnUrl();
   }
 
   checkExistingSession();
@@ -358,7 +345,6 @@
     document.getElementById('submitBtn').textContent =
       mode === 'signin' ? 'Sign In' : 'Create Free Account';
 
-    // Reset password autocomplete hint
     const pw = document.getElementById('password');
     pw.autocomplete = mode === 'signin' ? 'current-password' : 'new-password';
     pw.placeholder  = '••••••••';
@@ -377,13 +363,9 @@
   }
 
   // ── Update plan badge for paid checkout flows ──────────────
-  // When a visitor clicks Subscribe (monthly or yearly) on the
-  // Wix pricing page, they land here with ?checkout=monthly or
-  // ?checkout=yearly. Switch to signup tab and update the badge
-  // so the card reflects the plan they actually clicked on.
   const checkoutParam = new URLSearchParams(window.location.search).get('checkout');
   if (checkoutParam === 'monthly' || checkoutParam === 'yearly') {
-    setMode('signup'); // default to signup tab for new paid members
+    setMode('signup');
     const badge = document.querySelector('.plan-badge');
     if (badge) {
       badge.innerHTML = checkoutParam === 'yearly'
@@ -429,22 +411,33 @@
       btn.disabled    = true;
 
       try {
-        const ms = await getMemberstack();
-
-        // Create the member and assign Standard plan
-        await ms.signupMemberEmailPassword({
+        // The `profiles` row (defaulting to Standard tier) is
+        // created automatically by a database trigger — nothing
+        // to do here beyond the signup call itself.
+        const { error } = await sb.auth.signUp({
           email,
           password: pw,
-          customFields: { 'first-name': firstName },
-          plans: [{ planId: PLAN_STANDARD }],
+          options: {
+            data: { first_name: firstName },
+            emailRedirectTo: `${window.location.origin}${window.location.pathname}${window.location.search}`,
+          },
         });
 
-        showAlert('Account created! Taking you to the portal…', 'success');
-        setTimeout(() => { window.location.href = getReturnUrl(); }, 1200);
+        if (error) throw error;
+
+        // No session yet — Supabase requires email confirmation
+        // before login works. Don't redirect; tell them to check
+        // their inbox instead.
+        showAlert(
+          `Almost there — we've sent a confirmation link to ${email}. Click it to activate your account, then come back here to sign in.`,
+          'success'
+        );
+        btn.textContent = 'Create Free Account';
+        btn.disabled    = false;
 
       } catch (err) {
         console.error('[signup]', err);
-        const msg = err?.message?.includes('already')
+        const msg = err?.message?.toLowerCase().includes('already registered')
           ? 'An account with this email already exists. Try signing in.'
           : 'Could not create account. Please try again.';
         showAlert(msg);
@@ -458,12 +451,15 @@
       btn.disabled    = true;
 
       try {
-        const ms = await getMemberstack();
-        await ms.loginMemberEmailPassword({ email, password: pw });
+        const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+        if (error) throw error;
         window.location.href = getReturnUrl();
       } catch (err) {
         console.error('[signin]', err);
-        showAlert('Incorrect email or password. Please try again.');
+        const msg = err?.message?.toLowerCase().includes('email not confirmed')
+          ? 'Please confirm your email first — check your inbox for the link we sent.'
+          : 'Incorrect email or password. Please try again.';
+        showAlert(msg);
         btn.textContent = 'Sign In';
         btn.disabled    = false;
       }
@@ -485,10 +481,13 @@
       return;
     }
     try {
-      const ms = await getMemberstack();
-      await ms.sendMemberResetPasswordEmail({ email });
+      const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password/`,
+      });
+      if (error) throw error;
       showAlert('Password reset email sent — check your inbox.', 'success');
     } catch (err) {
+      console.error('[reset]', err);
       showAlert('Could not send reset email. Check the address and try again.');
     }
   });

@@ -1,88 +1,77 @@
 // ============================================================
 // LottoIQ — auth.js
-// Memberstack authentication gate and tier-based feature control.
+// Supabase authentication gate and tier-based feature control.
 //
-// Load this FIRST in every member page — before any other JS.
+// Load this FIRST in every member page — before any other JS —
+// and AFTER the Supabase JS CDN script:
+//   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+//
 // It redirects non-members before the page renders, and
 // unlocks Insider features for qualifying members.
 //
-// Memberstack public key: pk_50e515ccd8a0f0e5c414
-// Plan IDs:
-//   Standard: pln_standard-799f0qlu
-//   Insider:  pln_insider--st9g0qnu
+// Replaces Memberstack. Tier is now read from the `profiles`
+// table (id = auth user id, column `tier`), which can ONLY be
+// written server-side by the Stripe webhook using the
+// service_role key — never from this file.
 // ============================================================
 
-const MEMBERSTACK_KEY     = 'pk_50e515ccd8a0f0e5c414';
-const PLAN_STANDARD       = 'pln_standard-799f0qlu';
-const PLAN_INSIDER        = 'pln_insider--st9g0qnu';
-const PRICE_MONTHLY       = 'prc_insider-monthly-jtcq0qgl';
-const PRICE_YEARLY        = 'prc_insider-yearly-o6190yz7';
-const SIGNIN_URL          = '/signin';
+const SUPABASE_URL      = 'https://nnhvhqggaxfraqmkkehg.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_QkI9i4nwrYyctRemhsZJWw_lolAkKjK';
 
-// ── Wait for Memberstack to initialise ───────────────────────
-// Memberstack loads async via their CDN script. We poll for
-// the $memberstackDom object rather than using a callback to
-// keep this compatible with plain JS (no bundler).
+// Billing interval keys — the actual Stripe Price IDs live only in the
+// create-checkout-session Netlify function's environment variables,
+// never in client-side code.
+const INTERVAL_MONTHLY = 'monthly';
+const INTERVAL_YEARLY  = 'yearly';
 
-async function getMemberstack(maxWait = 5000) {
-  const interval = 100;
-  let elapsed    = 0;
+const SIGNIN_URL = '/signin';
 
-  while (elapsed < maxWait) {
-    if (window.$memberstackDom) return window.$memberstackDom;
-    await new Promise(r => setTimeout(r, interval));
-    elapsed += interval;
-  }
-
-  throw new Error('Memberstack did not initialise in time');
-}
+// Single shared Supabase client for this page load
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 
 // ── Gate: redirect non-members ───────────────────────────────
-// Runs immediately on every /games/* page. If no member is
-// logged in, redirects to /signin with a return URL so the
+// Runs immediately on every /games/* page. If no session is
+// present, redirects to /signin with a return URL so the
 // member lands back on the correct page after login.
 
 async function enforceAuth() {
-  let ms, member;
+  const { data: { session }, error } = await sb.auth.getSession();
 
-  try {
-    ms = await getMemberstack();
-
-    // After Stripe checkout, Memberstack redirects back with
-    // ?fromCheckout=true. The cached getCurrentMember() still
-    // holds the pre-upgrade plan, so we force a network refetch
-    // to pick up the newly activated Insider plan before gating.
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('fromCheckout') === 'true') {
-      // refetch() re-fetches member from Memberstack servers
-      await ms.refetch();
-      // Memberstack redirects to its configured post-checkout URL (usually /)
-      // rather than the page the member was on. Retrieve the stored game page
-      // and redirect back there so they land on the right page as Insider.
-      const returnUrl = sessionStorage.getItem('lottoiq_post_checkout_url');
-      sessionStorage.removeItem('lottoiq_post_checkout_url');
-      if (returnUrl && returnUrl !== window.location.pathname) {
-        window.location.replace(returnUrl);
-        return null; // redirect in progress — halt auth flow
-      }
-      // Already on the right page — just clean up the URL
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-
-    member = await ms.getCurrentMember();
-  } catch (err) {
-    console.warn('[auth] Memberstack error — redirecting to signin:', err.message);
+  if (error || !session) {
     redirectToSignin();
     return null;
   }
 
-  if (!member || !member.data) {
+  // ── Return from Stripe checkout ─────────────────────────────
+  // Stripe's success_url brings the member back here with
+  // ?fromCheckout=true. The webhook that flips profiles.tier to
+  // 'insider' may not have landed yet, so we briefly poll for it
+  // rather than trusting a cached/stale read.
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('fromCheckout') === 'true') {
+    await waitForInsiderTier(session.user.id);
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+
+  const { data: profile, error: profileError } = await sb
+    .from('profiles')
+    .select('tier, first_name')
+    .eq('id', session.user.id)
+    .single();
+
+  if (profileError || !profile) {
+    console.warn('[auth] Could not load profile:', profileError?.message);
     redirectToSignin();
     return null;
   }
 
-  return member.data;
+  return {
+    id:        session.user.id,
+    email:     session.user.email,
+    tier:      profile.tier,
+    firstName: profile.first_name,
+  };
 }
 
 function redirectToSignin() {
@@ -91,30 +80,39 @@ function redirectToSignin() {
 }
 
 
-// ── Tier detection ───────────────────────────────────────────
-// Returns 'insider', 'standard', or 'unknown' based on the
-// member's active plan IDs.
+// ── Poll for tier update after checkout ──────────────────────
+// Stripe webhooks are near-instant but not synchronous with the
+// browser redirect. Poll for a few seconds rather than showing
+// a Standard-gated page to someone who just paid.
 
-function getMemberTier(memberData) {
-  const planIds = (memberData.planConnections || [])
-    .filter(p => p.status === 'ACTIVE')
-    .map(p => p.planId);
+async function waitForInsiderTier(userId, maxWaitMs = 8000, intervalMs = 1000) {
+  let elapsed = 0;
+  while (elapsed < maxWaitMs) {
+    const { data } = await sb
+      .from('profiles')
+      .select('tier')
+      .eq('id', userId)
+      .single();
 
-  if (planIds.includes(PLAN_INSIDER))  return 'insider';
-  if (planIds.includes(PLAN_STANDARD)) return 'standard';
-  return 'standard'; // default to standard if plan unrecognised
+    if (data && data.tier === 'insider') return true;
+
+    await new Promise(r => setTimeout(r, intervalMs));
+    elapsed += intervalMs;
+  }
+  return false; // webhook may just be slow — UI will show Standard until next load
 }
 
 
 // ── Apply tier to UI ─────────────────────────────────────────
 // Called after member is confirmed. Updates nav, unlocks
 // Insider features, hides upgrade prompts for Insider members.
+// Unchanged in behaviour from the Memberstack version — only
+// the data source (memberData) changed shape.
 
 function applyMemberUI(memberData) {
-  const tier      = getMemberTier(memberData);
-  const firstName = memberData.auth?.email?.split('@')[0] || '?';
-  const initial   = (memberData.customFields?.['first-name'] || firstName)
-                      .charAt(0).toUpperCase();
+  const tier    = memberData.tier;
+  const initial = (memberData.firstName || memberData.email.split('@')[0])
+                    .charAt(0).toUpperCase();
 
   // ── Nav ────────────────────────────────────────────────────
   const badge = document.querySelector('.tier-badge');
@@ -126,14 +124,12 @@ function applyMemberUI(memberData) {
   const avatar = document.querySelector('.nav-avatar');
   if (avatar) avatar.textContent = initial;
 
-  // Hide upgrade pill in nav for Insider members
   const navUpgrade = document.querySelector('.nav-upgrade');
   if (navUpgrade && tier === 'insider') {
     navUpgrade.style.display = 'none';
   }
 
   // ── Dataset selector ───────────────────────────────────────
-  // Unlock all-time and last-90 buttons for Insider
   if (tier === 'insider') {
     document.querySelectorAll('.ds-btn.locked').forEach(btn => {
       btn.classList.remove('locked');
@@ -154,9 +150,9 @@ function applyMemberUI(memberData) {
 
   // ── Generator locked filters ───────────────────────────────
   // NOTE: generator HTML may not be in the DOM yet at this point
-  // (it renders after Airtable data loads). unlockInsiderUI() is
-  // called again from ui.js after switchGame() completes to catch
-  // any elements that weren't present on first run.
+  // (it renders after data loads). unlockInsiderUI() is called
+  // again from ui.js after switchGame() completes to catch any
+  // elements that weren't present on first run.
   if (tier === 'insider') {
     unlockInsiderUI();
   }
@@ -173,17 +169,14 @@ function applyMemberUI(memberData) {
 
 
 // ── Unlock Insider UI ────────────────────────────────────────
-// Removes all Insider gates from the DOM. Safe to call multiple
-// times — called once immediately in applyMemberUI() and again
-// from ui.js after switchGame() renders the generator section.
+// Identical to the Memberstack version — pure DOM manipulation,
+// no dependency on how tier was determined.
 
 function unlockInsiderUI() {
-  // Remove locked styling from filter groups
   document.querySelectorAll('.filter-locked').forEach(group => {
     group.classList.remove('filter-locked');
   });
 
-  // ── Top pair select ───────────────────────────────────────
   const topPair = document.getElementById('topPair');
   if (topPair && topPair.disabled) {
     topPair.disabled = false;
@@ -191,34 +184,27 @@ function unlockInsiderUI() {
     topPair.dataset.unlocked = 'true';
   }
 
-  // ── My Numbers ────────────────────────────────────────────
-  // Unlock inputs and load any saved numbers from localStorage
-  const myInput = document.getElementById('myNumbersInput');
-  const mySave  = document.getElementById('myNumbersSave');
-  const myClear = document.getElementById('myNumbersClear');
+  const myInput  = document.getElementById('myNumbersInput');
+  const mySave   = document.getElementById('myNumbersSave');
+  const myClear  = document.getElementById('myNumbersClear');
   if (myInput) myInput.disabled = false;
   if (mySave)  mySave.disabled  = false;
   if (myClear) myClear.disabled = false;
   if (typeof initMyNumbers === 'function') initMyNumbers();
 
-  // Remove locked badge from labels
   document.querySelectorAll('.locked-badge').forEach(badge => {
     badge.style.display = 'none';
   });
 
-  // Pairs gate
   const gate = document.getElementById('pairsGate');
   if (gate) gate.style.display = 'none';
 
-  // Upgrade banner
   const banner = document.getElementById('upgradeBanner');
   if (banner) banner.style.display = 'none';
 
-  // Nav upgrade pill
   const navUpgrade = document.querySelector('.nav-upgrade');
   if (navUpgrade) navUpgrade.style.display = 'none';
 
-  // Dataset selector locks
   document.querySelectorAll('.ds-btn.locked').forEach(btn => {
     btn.classList.remove('locked');
     btn.disabled = false;
@@ -226,17 +212,14 @@ function unlockInsiderUI() {
     if (lockIcon) lockIcon.remove();
   });
 
-  // Dataset note
   const datasetNote = document.querySelector('.dataset-note');
   if (datasetNote) datasetNote.style.display = 'none';
 
-  // Number of sets selector — show and enable for Insider
   const numSetsGroup = document.getElementById('numSetsGroup');
   const numSets      = document.getElementById('numSets');
   if (numSetsGroup) numSetsGroup.style.display = 'block';
   if (numSets)      numSets.disabled = false;
 
-  // Never appeared together — show and enable for Insider
   const neverAppearedGroup = document.getElementById('neverAppearedGroup');
   const neverAppeared      = document.getElementById('neverAppeared');
   if (neverAppearedGroup) {
@@ -245,66 +228,77 @@ function unlockInsiderUI() {
   }
   if (neverAppeared) neverAppeared.disabled = false;
 
-  // Spread filter — show and enable for Insider
   const spreadFilterGroup = document.getElementById('spreadFilterGroup');
   const spreadFilter      = document.getElementById('spreadFilter');
   if (spreadFilterGroup) spreadFilterGroup.style.display = 'block';
   if (spreadFilter)      spreadFilter.disabled = false;
 
-  // Initialise Auto/Manual mode toggle
   if (typeof initGeneratorMode === 'function') initGeneratorMode();
 }
 
 
 // ── Upgrade to Insider ───────────────────────────────────────
-// $memberstackDom exposes purchasePlansWithCheckout({ priceId })
-// for triggering the Stripe checkout modal from JS.
-// Confirmed via Object.keys($memberstackDom) on the live page.
+// Calls a Netlify function that creates a Stripe Checkout
+// session and returns its hosted URL. This function doesn't
+// exist yet — wired now per your request, will 404 until we
+// build create-checkout-session.js.
 
-async function openUpgradeCheckout(priceId) {
+async function openUpgradeCheckout(interval) {
   try {
-    const ms = await getMemberstack();
-    // Memberstack redirects to its own configured URL after checkout
-    // (ignores our ?return= param). Store the current page so we can
-    // send the member back here once fromCheckout=true is detected.
-    sessionStorage.setItem('lottoiq_post_checkout_url', window.location.pathname);
-    await ms.purchasePlansWithCheckout({ priceId });
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      redirectToSignin();
+      return;
+    }
+
+    const res = await fetch('/.netlify/functions/create-checkout-session', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        interval,
+        userId:     session.user.id,
+        email:      session.user.email,
+        returnPath: window.location.pathname,
+      }),
+    });
+
+    if (!res.ok) throw new Error(`Checkout session request failed: ${res.status}`);
+
+    const { url } = await res.json();
+    window.location.href = url; // Stripe-hosted checkout page
   } catch (err) {
     console.error('[auth] Checkout error:', err);
+    alert('Something went wrong starting checkout. Please try again in a moment.');
   }
 }
 
 function wireUpgradeButtons() {
-  // Nav pill — monthly (lowest friction)
   const navUpgrade = document.querySelector('.nav-upgrade');
   if (navUpgrade) {
     navUpgrade.addEventListener('click', e => {
       e.preventDefault();
-      openUpgradeCheckout(PRICE_MONTHLY);
+      openUpgradeCheckout(INTERVAL_MONTHLY);
     });
   }
 
-  // Banner CTA — also monthly
   const bannerBtn = document.getElementById('upgradeCtaBtn');
   if (bannerBtn) {
     bannerBtn.addEventListener('click', e => {
       e.preventDefault();
-      openUpgradeCheckout(PRICE_MONTHLY);
+      openUpgradeCheckout(INTERVAL_MONTHLY);
     });
   }
 }
 
 
 // ── Logout ───────────────────────────────────────────────────
-// Bound to the nav logout button by wireLogoutButton() below.
 
 async function logout() {
   try {
-    const ms = await getMemberstack();
-    await ms.logout();
-    window.location.href = SIGNIN_URL;
+    await sb.auth.signOut();
   } catch (err) {
     console.error('[auth] Logout error:', err);
+  } finally {
     window.location.href = SIGNIN_URL;
   }
 }
@@ -326,25 +320,20 @@ async function initAuth() {
   const memberData = await enforceAuth();
   if (!memberData) return null; // redirect already fired
 
-  // Apply UI updates immediately — before data loads
   applyMemberUI(memberData);
-
-  // Wire interactive elements — safe to call after DOM is ready
-  // since scripts load at bottom of <body>
   wireUpgradeButtons();
   wireLogoutButton();
 
   // ── Auto-trigger checkout from Wix pricing buttons ──────────
   // Wix links to /games/lotto-649/?checkout=monthly (or yearly).
   // If the member is Standard and the param is present, open
-  // the checkout modal immediately so they don't have to click again.
+  // checkout immediately so they don't have to click again.
   const params   = new URLSearchParams(window.location.search);
   const checkout = params.get('checkout');
-  if (checkout && getMemberTier(memberData) !== 'insider') {
-    const priceId = checkout === 'yearly' ? PRICE_YEARLY : PRICE_MONTHLY;
-    // Clean the URL before opening modal so a refresh doesn't re-trigger
+  if (checkout && memberData.tier !== 'insider') {
+    const interval = checkout === 'yearly' ? INTERVAL_YEARLY : INTERVAL_MONTHLY;
     window.history.replaceState({}, '', window.location.pathname);
-    await openUpgradeCheckout(priceId);
+    await openUpgradeCheckout(interval);
   }
 
   return memberData;
