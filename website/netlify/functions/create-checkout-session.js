@@ -70,6 +70,7 @@ exports.handler = async function (event) {
       line_items: [{ price: priceId, quantity: 1 }],
       customer_email: email,
       client_reference_id: userId,
+      allow_promotion_codes: true,
       metadata:            { supabase_user_id: userId },
       subscription_data: {
         metadata: { supabase_user_id: userId },
