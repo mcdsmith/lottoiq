@@ -1114,11 +1114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!memberData) return;
 
   // Only Insider can use this page
-  const tier = (memberData.planConnections || [])
-    .filter(p => p.status === 'ACTIVE')
-    .map(p => p.planId);
-
-  const isInsider = tier.includes('pln_insider--st9g0qnu');
+  const isInsider = memberData.tier === 'insider';
   if (!isInsider) {
     document.getElementById('uploadScreen').innerHTML = `
       <div class="upload-screen">
