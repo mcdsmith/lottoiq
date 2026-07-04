@@ -129,6 +129,13 @@ function applyMemberUI(memberData) {
     navUpgrade.style.display = 'none';
   }
 
+  // Manage Account (Stripe Billing Portal) — Insider only.
+  // Standard members have no Stripe customer to manage.
+  const navManage = document.querySelector('.nav-manage');
+  if (navManage) {
+    navManage.style.display = tier === 'insider' ? '' : 'none';
+  }
+
   // ── Dataset selector ───────────────────────────────────────
   if (tier === 'insider') {
     document.querySelectorAll('.ds-btn.locked').forEach(btn => {
@@ -312,6 +319,52 @@ function wireLogoutButton() {
 }
 
 
+// ── Manage Account (Stripe Billing Portal) — Insider only ─────
+// Opens Stripe's hosted Customer Portal so members can update
+// their card, view invoices, or cancel. Mirrors the
+// openUpgradeCheckout() pattern but calls create-portal-session,
+// which verifies the caller's Supabase token server-side rather
+// than trusting a client-supplied userId (a portal link grants
+// access to real billing data, unlike a checkout link).
+
+async function openManageAccount() {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      redirectToSignin();
+      return;
+    }
+
+    const res = await fetch('/.netlify/functions/create-portal-session', {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        returnPath: window.location.pathname,
+      }),
+    });
+
+    if (!res.ok) throw new Error(`Portal session request failed: ${res.status}`);
+
+    const { url } = await res.json();
+    window.location.href = url; // Stripe-hosted billing portal
+  } catch (err) {
+    console.error('[auth] Manage Account error:', err);
+    alert('Something went wrong opening your account settings. Please try again in a moment.');
+  }
+}
+
+function wireManageAccountButton() {
+  const btn = document.querySelector('.nav-manage');
+  if (btn) btn.addEventListener('click', e => {
+    e.preventDefault();
+    openManageAccount();
+  });
+}
+
+
 // ── Init ─────────────────────────────────────────────────────
 // Called by main.js before switchGame(). Returns the member
 // data so main.js can pass it along if needed.
@@ -323,6 +376,7 @@ async function initAuth() {
   applyMemberUI(memberData);
   wireUpgradeButtons();
   wireLogoutButton();
+  wireManageAccountButton();
 
   // ── Auto-trigger checkout from Wix pricing buttons ──────────
   // Wix links to /games/lotto-649/?checkout=monthly (or yearly).
