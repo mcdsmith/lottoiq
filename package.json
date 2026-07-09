@@ -20,6 +20,7 @@
   "homepage": "https://github.com/mcdsmith/lottoiq#readme",
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",
+    "googleapis": "^173.0.0",
     "stripe": "^22.3.0"
   }
 }

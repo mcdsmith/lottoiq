@@ -19,6 +19,12 @@
   status = 200
   force  = true
 
+[[redirects]]
+  from   = "/api/log-generated"
+  to     = "/.netlify/functions/log-generated"
+  status = 200
+  force  = true
+
 
 # ── Security Headers ──────────────────────────────────────────
 

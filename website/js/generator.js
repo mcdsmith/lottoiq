@@ -80,10 +80,32 @@ function buildWhyBox(nums, cfg, sumMin, sumMax, overdueCount) {
 }
 
 
+// ── Fire-and-forget logging (Feature 3, Part A) ─────────────────
+// Logs every set the Generator produces to /api/log-generated, so
+// there's a running history for the future Generator Honesty
+// Scoreboard (Part B, built later). Anonymous — no user/session ID.
+//
+// Never awaited and never allowed to affect the Generator UI: a
+// down endpoint, a network error, or a non-200 response must be
+// invisible to the user and must never delay or block rendering.
+
+function logGeneratedSet(cfg, nums, bonus) {
+  try {
+    fetch('/api/log-generated', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ game: cfg.table, numbers: nums, bonus }),
+    }).catch(() => {});
+  } catch (e) {
+    // no-op — logging must never break the Generate button
+  }
+}
+
+
 // ── Render a single set card ──────────────────────────────────
 
-function renderSetCard(nums, cfg, setIndex, totalSets, sumMin, sumMax, overdueCount) {
-  const bonus = Math.floor(Math.random() * cfg.maxNum) + 1;
+function renderSetCard(nums, cfg, setIndex, totalSets, sumMin, sumMax, overdueCount, bonus) {
+  if (bonus === undefined) bonus = Math.floor(Math.random() * cfg.maxNum) + 1;
 
   const ballsHtml = nums.map(n =>
     `<div class="result-ball">${n}</div>`
@@ -234,6 +256,9 @@ function generateNumbers() {
         `<div class="result-ball">${n}</div>`
       ).join('') + `<div class="result-ball bonus">${bonus}</div>`;
 
+      // Log this set (fire-and-forget) — Feature 3, Part A
+      if (nums.length) logGeneratedSet(cfg, nums, bonus);
+
       // Gather filter context for explanation
       const _statsDraws = sliceByDataset(
         allDrawsData[currentGame].map(r => parseRecord(r, cfg.numCols)),
@@ -274,9 +299,16 @@ function generateNumbers() {
       }
       multiWrap.style.display = 'block';
 
+      // Pre-compute each card's bonus so the same value is used for
+      // rendering, the copy button, and the logged row below.
+      const setBonuses = sets.map(() => Math.floor(Math.random() * cfg.maxNum) + 1);
+
       multiWrap.innerHTML = sets.map((nums, i) =>
-        renderSetCard(nums, cfg, i, sets.length, sumMin, sumMax, overdueCount)
+        renderSetCard(nums, cfg, i, sets.length, sumMin, sumMax, overdueCount, setBonuses[i])
       ).join('');
+
+      // Log each set (fire-and-forget) — Feature 3, Part A
+      sets.forEach((nums, i) => logGeneratedSet(cfg, nums, setBonuses[i]));
 
       // Failure notice
       if (failed.length) {
