@@ -20,11 +20,8 @@
   force  = true
 
 [[redirects]]
-  # TEMPORARY — intentionally broken to verify the Generator UI degrades
-  # gracefully when logging fails. Revert this "to" value back to
-  # "/.netlify/functions/log-generated" after testing.
   from   = "/api/log-generated"
-  to     = "/.netlify/functions/does-not-exist"
+  to     = "/.netlify/functions/log-generated"
   status = 200
   force  = true
 
