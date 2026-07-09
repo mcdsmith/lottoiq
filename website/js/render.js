@@ -230,6 +230,82 @@ function renderPatternStats(draws, cfg) {
 }
 
 
+// ── Render Due Score ─────────────────────────────────────────
+// Standard members see the top 5 numbers, score only.
+// Insider members see the top 10, plus the per-signal breakdown
+// (frequency / trend / overdue / cluster affinity points).
+//
+// Does nothing if the page has no #dueScoreList element — so
+// pages without a Due Score section (Pick games, Daily Keno,
+// etc.) are unaffected by this being wired into ui.js globally.
+//
+// Expects markup along these lines (mirrors the Overdue section):
+//   <div id="dueScoreList"></div>
+//   <p id="dueScoreEmpty" style="display:none">
+//     Not enough historical draws yet for this dataset (need 20+).
+//   </p>
+//   <p id="dueScoreDesc"></p>
+//   <div id="dueScoreNote">Showing top 5 · <a href="/upgrade">Unlock top 10 +
+//     breakdown with Insider</a></div>
+
+function renderDueScore(dueScores, cfg) {
+  const listEl = document.getElementById('dueScoreList');
+  if (!listEl) return;
+
+  const emptyEl = document.getElementById('dueScoreEmpty');
+  const noteEl  = document.getElementById('dueScoreNote');
+
+  if (!dueScores.length) {
+    listEl.innerHTML = '';
+    if (emptyEl) emptyEl.style.display = 'block';
+    if (noteEl)  noteEl.style.display  = 'none';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  const isInsider = window.LottoIQTier === 'insider';
+  const rows      = dueScores.slice(0, isInsider ? 10 : 5);
+
+  // Standard members see a "there's more" nudge; Insiders don't need it
+  if (noteEl) noteEl.style.display = isInsider ? 'none' : 'block';
+
+  listEl.innerHTML = rows.map((r, i) => `
+    <div class="due-score-row">
+      <span class="due-score-rank">${i + 1}</span>
+      <div class="due-score-ball">${r.num}</div>
+      <div class="due-score-bar-wrap">
+        <div class="due-score-bar" style="width:${r.score}%"></div>
+      </div>
+      <div class="due-score-info">
+        <span class="due-score-value">Score: ${r.score}</span>
+        <span class="due-score-trend">${r.trend}</span>
+      </div>
+      ${isInsider ? `
+      <div class="due-score-breakdown">
+        <span>Freq +${r.freqPts}</span>
+        <span>Trend +${r.trendPts}</span>
+        <span>Overdue +${r.overduePts}</span>
+        <span>Cluster +${r.clusterPts}</span>
+      </div>` : ''}
+    </div>`).join('');
+
+  // Update subtitle to reflect the active dataset — same pattern
+  // as renderHotCold() / renderPatternStats()
+  const datasetLabels = {
+    last30:  'the last 30 draws',
+    last90:  'the last 90 draws',
+    alltime: 'all available draws',
+  };
+  const activeDataset = document.querySelector('.ds-btn.active')?.dataset.dataset || 'last30';
+  const descEl = document.getElementById('dueScoreDesc');
+  if (descEl) {
+    const label = datasetLabels[activeDataset] ?? 'the selected draws';
+    descEl.textContent =
+      `Composite score (0–100) blending frequency, trend, overdue, and pairing signals in ${label}.`;
+  }
+}
+
+
 // ── Render Draw Table ────────────────────────────────────────
 // Entry point: resets to page 1 and renders the first page.
 

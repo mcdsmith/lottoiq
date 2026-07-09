@@ -530,6 +530,204 @@ function computeSpreadHints(draws) {
 }
 
 
+// ── Compute Due Score ─────────────────────────────────────────
+// Direct JS port of compute_due_scores() from lotto_generator.py
+// (the desktop tool). Ranks every number in the pool using four
+// decay-weighted signals, each worth up to 25 pts (100 max):
+//
+//   1. Decay-weighted frequency — recent draws count more than
+//      old ones, weight = e^(-lambda * i), i=0 is most recent.
+//   2. Trend — decay-weighted frequency in the newer half of the
+//      dataset vs the older half. ratio > 1.20 = "↑ Rising" (25pts),
+//      ratio < 0.80 = "↓ Cooling" (0pts), else "→ Stable" (12pts).
+//   3. Overdue — draws since last seen, linearly scaled 0–25
+//      across the pool (same "ago" convention as computeOverdue()).
+//   4. Cluster affinity — decay-weighted co-occurrence with the
+//      top-10 hottest numbers (by signal 1), excluding self-matches.
+//
+// Lambda is auto-selected from the dataset size, matching Python
+// exactly: n<=30 → 0.05, n<=90 → 0.025, else → 0.01. This means
+// Due Score should always be run on the SAME sliced dataset as
+// Hot & Cold / Pattern Statistics (sliceByDataset() output), not
+// the full unsliced draws array — the lambda choice depends on it.
+//
+// Requires >= 20 draws in the slice, mirroring the Python minimum;
+// returns [] otherwise so the caller can show a "not enough data"
+// state instead of a misleading score.
+//
+// Uses pythonRound() (below) instead of Math.round() for all three
+// normalised-to-25 signals, to match Python's round()-half-to-even
+// behaviour exactly — see that function's comment for why this
+// matters in practice.
+//
+// Returns array of:
+//   { num, score, trend, freqPts, trendPts, overduePts, clusterPts }
+// sorted by score descending, or [] if fewer than 20 draws.
+
+// Python 3's round() uses "round half to even" (banker's rounding);
+// JS Math.round() always rounds .5 up. They disagree on exact .5
+// boundaries — which happen often for the Overdue signal specifically,
+// since its inputs are plain integers (ago counts), so (ago-min)/range*25
+// lands exactly on .5 far more often than the continuous decay sums used
+// by the other three signals. Verified against the Python original on
+// synthetic data — without this, ~1 in 6 numbers came out 1 point off.
+function pythonRound(x) {
+  const floor = Math.floor(x);
+  const diff  = x - floor;
+  if (Math.abs(diff - 0.5) < 1e-9) {
+    return (floor % 2 === 0) ? floor : floor + 1;
+  }
+  return Math.round(x);
+}
+
+function computeDueScores(draws, cfg) {
+  const pool   = cfg.maxNum;
+  const minNum = cfg.minNum ?? 1;
+  const n      = draws.length;
+  if (n < 20) return [];
+
+  // ── Select lambda (matches Python thresholds exactly) ──────
+  let lam;
+  if (n <= 30)      lam = 0.05;
+  else if (n <= 90) lam = 0.025;
+  else              lam = 0.01;
+
+  // Pre-compute weights for all draw positions (i=0 = most recent)
+  const weights = [];
+  for (let i = 0; i < n; i++) weights.push(Math.exp(-lam * i));
+
+  const nums = [];
+  for (let x = minNum; x <= pool; x++) nums.push(x);
+
+  // ── Signal 1: Decay-weighted frequency ──────────────────────
+  const decayFreq = {};
+  nums.forEach(x => { decayFreq[x] = 0; });
+  draws.forEach((d, i) => {
+    const w = weights[i];
+    d.nums.forEach(num => { decayFreq[num] += w; });
+  });
+
+  const dfVals  = nums.map(x => decayFreq[x]);
+  const dfMin   = Math.min(...dfVals);
+  const dfMax   = Math.max(...dfVals);
+  const dfRange = dfMax !== dfMin ? dfMax - dfMin : 1;
+  const freqPts = {};
+  nums.forEach(x => {
+    freqPts[x] = pythonRound((decayFreq[x] - dfMin) / dfRange * 25);
+  });
+
+  // ── Signal 2: Trend tag ──────────────────────────────────────
+  // Split draws in half; compare decay-weighted frequency in each
+  // half. Weights are re-indexed within each half so i=0 is most
+  // recent in that half — matches Python exactly.
+  const half       = Math.floor(n / 2);
+  const recentHalf = draws.slice(0, half);
+  const olderHalf  = draws.slice(half);
+
+  const decayRecent = {};
+  nums.forEach(x => { decayRecent[x] = 0; });
+  recentHalf.forEach((d, i) => {
+    const w = Math.exp(-lam * i);
+    d.nums.forEach(num => { decayRecent[num] += w; });
+  });
+
+  const decayOlder = {};
+  nums.forEach(x => { decayOlder[x] = 0; });
+  olderHalf.forEach((d, i) => {
+    const w = Math.exp(-lam * i);
+    d.nums.forEach(num => { decayOlder[num] += w; });
+  });
+
+  const trendTag = {};
+  const trendPts = {};
+  nums.forEach(x => {
+    const r = decayRecent[x];
+    const o = decayOlder[x];
+    let ratio;
+    if (o === 0) {
+      ratio = (r === 0) ? 1.0 : 999.0;
+    } else {
+      ratio = r / o;
+    }
+    if (ratio > 1.20) {
+      trendTag[x] = '↑ Rising';
+      trendPts[x] = 25;
+    } else if (ratio < 0.80) {
+      trendTag[x] = '↓ Cooling';
+      trendPts[x] = 0;
+    } else {
+      trendTag[x] = '→ Stable';
+      trendPts[x] = 12;
+    }
+  });
+
+  // ── Signal 3: Recency / Overdue ──────────────────────────────
+  // "ago" = draws since last seen, using the same newest-first
+  // convention as computeOverdue() (never-seen = n).
+  const lastSeenIdx = {};
+  nums.forEach(x => { lastSeenIdx[x] = -1; });
+  draws.forEach((d, idx) => {
+    d.nums.forEach(num => {
+      if (lastSeenIdx[num] === -1) lastSeenIdx[num] = idx;
+    });
+  });
+
+  const agoByNum = {};
+  nums.forEach(x => {
+    agoByNum[x] = lastSeenIdx[x] === -1 ? n : lastSeenIdx[x];
+  });
+
+  const agoVals = nums.map(x => agoByNum[x]);
+  const oMin    = Math.min(...agoVals);
+  const oMax    = Math.max(...agoVals);
+  const oRange  = oMax !== oMin ? oMax - oMin : 1;
+  const overduePts = {};
+  nums.forEach(x => {
+    overduePts[x] = pythonRound((agoByNum[x] - oMin) / oRange * 25);
+  });
+
+  // ── Signal 4: Cluster Affinity ────────────────────────────────
+  // Top-10 numbers by decay-weighted frequency across the full slice
+  const top10Hot = new Set(
+    [...nums].sort((a, b) => decayFreq[b] - decayFreq[a]).slice(0, 10)
+  );
+
+  const coScore = {};
+  nums.forEach(x => { coScore[x] = 0; });
+  draws.forEach((d, i) => {
+    const w = weights[i];
+    const hotInDraw = d.nums.filter(num => top10Hot.has(num));
+    d.nums.forEach(num => {
+      // Subtract 1 if num is itself a top-10 number (avoid self-count)
+      const selfAdjust = top10Hot.has(num) ? 1 : 0;
+      coScore[num] += w * (hotInDraw.length - selfAdjust);
+    });
+  });
+
+  const coVals = nums.map(x => coScore[x]);
+  const cMin   = Math.min(...coVals);
+  const cMax   = Math.max(...coVals);
+  const cRange = cMax !== cMin ? cMax - cMin : 1;
+  const clusterPts = {};
+  nums.forEach(x => {
+    clusterPts[x] = pythonRound((coScore[x] - cMin) / cRange * 25);
+  });
+
+  // ── Assemble results ──────────────────────────────────────────
+  const results = nums.map(x => ({
+    num:        x,
+    score:      freqPts[x] + trendPts[x] + overduePts[x] + clusterPts[x],
+    trend:      trendTag[x],
+    freqPts:    freqPts[x],
+    trendPts:   trendPts[x],
+    overduePts: overduePts[x],
+    clusterPts: clusterPts[x],
+  }));
+
+  return results.sort((a, b) => b.score - a.score);
+}
+
+
 // ── Explain Generated Set ─────────────────────────────────────
 // Produces a rich, data-driven explanation of why a generated
 // set looks the way it does vs the active dataset patterns.

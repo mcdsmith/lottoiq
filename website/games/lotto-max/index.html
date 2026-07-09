@@ -209,6 +209,27 @@
   <hr class="section-divider"/>
 
 
+  <!-- ── DUE SCORE ─────────────────────────────────────────── -->
+  <!-- Standard members see the top 5 (score only). Insider members
+       see the top 10 plus the per-signal breakdown (frequency /
+       trend / overdue / cluster affinity). Populated by
+       renderDueScore() in render.js, computed by computeDueScores()
+       in analytics.js — a direct port of the Due Score formula from
+       the desktop lotto_generator.py tool. -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">Due Score</h2>
+      <span class="section-note">Composite ranking, not a prediction</span>
+    </div>
+    <p class="section-desc" id="dueScoreDesc">Composite score (0–100) blending frequency, trend, overdue, and pairing signals in the last 30 draws.</p>
+    <p class="due-score-empty" id="dueScoreEmpty" style="display:none">Not enough historical draws yet for this dataset — Due Score needs at least 20.</p>
+    <div class="due-score-grid" id="dueScoreList"></div>
+    <div class="due-score-note" id="dueScoreNote">Showing top 5 · <a href="/upgrade">Unlock the top 10 and full signal breakdown with Insider</a></div>
+  </div>
+
+  <hr class="section-divider"/>
+  
+  
   <!-- ── INSIDER GATE: TOP NUMBER PAIRS ───────────────────── -->
   <!-- Hidden for Insider users; replaced with actual pairs data -->
   <div class="insider-gate" id="pairsGate">

@@ -277,7 +277,7 @@
         <label>Upload draw history CSV</label>
         <div class="upload-drop" id="uploadDrop">
           <input type="file" id="csvFile" accept=".csv,.txt"/>
-          <div class="upload-drop-icon">📂</div>
+          <div class="upload-drop-icon">📁</div>
           <div class="upload-drop-label">
             <strong>Click to browse</strong> or drag &amp; drop your CSV file
           </div>
@@ -446,6 +446,23 @@
       </div>
       <p class="section-desc">Tap up to 2 numbers to lock them into your generated pick below.</p>
       <div class="overdue-grid" id="overdueGrid"></div>
+    </div>
+
+    <hr class="section-divider"/>
+
+    <!-- ── DUE SCORE ─────────────────────────────────────────── -->
+    <!-- This page is Insider-only (gated at auth check below), so
+         renderDueScore() will always show the top 10 + full signal
+         breakdown — the "showing top 5" nudge never applies here. -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Due Score</h2>
+        <span class="section-note">Composite ranking, not a prediction</span>
+      </div>
+      <p class="section-desc" id="dueScoreDesc">Composite score (0–100) blending frequency, trend, overdue, and pairing signals in the last 30 draws.</p>
+      <p class="due-score-empty" id="dueScoreEmpty" style="display:none">Not enough draws yet for this dataset — Due Score needs at least 20.</p>
+      <div class="due-score-grid" id="dueScoreList"></div>
+      <div class="due-score-note" id="dueScoreNote" style="display:none">Showing top 5 · <a href="/upgrade">Unlock the top 10 and full signal breakdown with Insider</a></div>
     </div>
 
     <hr class="section-divider"/>
@@ -848,6 +865,11 @@ function runCustomAnalysis() {
   renderHotCold(activeFreq);
   renderOverdue(computeOverdue(draws, cfg.maxNum, cfg.minNum));
   renderPatternStats(statsDraws, cfg);
+  // Due Score — same dataset slice as Hot & Cold / Pattern Stats,
+  // since its lambda auto-selects based on that slice's size. This
+  // page is Insider-only (see auth check below), so renderDueScore()
+  // will always render the top 10 + full breakdown.
+  renderDueScore(computeDueScores(statsDraws, cfg), cfg);
   renderCustomDrawTable(draws);
   initCheckMyNumbers(draws, cfg);
   populateTopPairs(draws, cfg);
@@ -866,6 +888,9 @@ function runCustomAnalysis() {
       renderHeatmap(activeFreq, cfg.maxNum, cfg.minNum);
       renderHotCold(activeFreq);
       renderPatternStats(sd, cfg);
+      // Due Score must be recomputed on every dataset switch too —
+      // its lambda depends on the slice size (last30/last90/alltime).
+      renderDueScore(computeDueScores(sd, cfg), cfg);
 
       // Update Auto hints
       const hints = computeDatasetHints(sd, cfg);
@@ -1151,4 +1176,3 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 </body>
 </html>
-

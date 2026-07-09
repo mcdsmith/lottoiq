@@ -55,6 +55,11 @@ async function switchGame(gameKey) {
     renderHotCold(activeFreq);
     renderOverdue(computeOverdue(draws, cfg.maxNum));
     renderPatternStats(statsDraws, cfg);
+
+    // Due Score — same dataset slice as Hot & Cold / Pattern Stats,
+    // since its lambda auto-selects based on that slice's size.
+    renderDueScore(computeDueScores(statsDraws, cfg), cfg);
+
     renderDrawTable(draws);
 
     // Wire the "Did my numbers ever win?" checker
@@ -121,6 +126,10 @@ function initDatasetSelector() {
       renderHeatmap(activeFreq, cfg.maxNum);
       renderHotCold(activeFreq);
       renderPatternStats(statsDraws, cfg);
+
+      // Due Score must be recomputed on every dataset switch too —
+      // its lambda depends on the slice size (last30/last90/alltime).
+      renderDueScore(computeDueScores(statsDraws, cfg), cfg);
 
       // Recalculate Auto mode hints for the new dataset slice
       if (window.LottoIQTier === 'insider') {

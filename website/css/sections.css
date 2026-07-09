@@ -272,6 +272,120 @@
   font-style: italic;
 }
 
+/* ── Due Score ── */
+.due-score-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.due-score-row {
+  background: var(--navy-2);
+  border: 1px solid var(--navy-4);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.due-score-rank {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.due-score-ball {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.due-score-bar-wrap {
+  flex: 1;
+  min-width: 40px;
+  height: 4px;
+  background: var(--navy-4);
+  border-radius: 2px;
+}
+
+.due-score-bar {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--gold);
+}
+
+.due-score-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.due-score-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.due-score-trend {
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* Insider-only per-signal breakdown, shown inline on the same row */
+.due-score-breakdown {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  border-left: 1px solid var(--navy-4);
+  padding-left: 12px;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.due-score-empty {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-style: italic;
+  padding: 12px 0;
+}
+
+/* "Showing top 5 · Unlock ... with Insider" nudge — hidden for Insiders */
+.due-score-note {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 10px;
+}
+
+.due-score-note a {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.due-score-note a:hover {
+  text-decoration: underline;
+}
+
 /* ── Top Pairs (Insider unlock) ── */
 .pairs-grid {
   display: grid;
