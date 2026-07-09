@@ -306,6 +306,77 @@ function renderDueScore(dueScores, cfg) {
 }
 
 
+// ── Render Randomness Audit ───────────────────────────────────
+// Chi-square goodness-of-fit result → card showing the p-value,
+// a plain-English verdict, and a "what does this mean?" note.
+//
+// Does nothing if the page has no #randomnessAuditCard element —
+// so pages without this section are unaffected, same as
+// renderDueScore()'s #dueScoreList guard.
+//
+// Expects markup along these lines:
+//   <p class="section-desc" id="randomnessAuditDesc"></p>
+//   <div class="randomness-audit-card" id="randomnessAuditCard"></div>
+
+function renderRandomnessAudit(result) {
+  const cardEl = document.getElementById('randomnessAuditCard');
+  if (!cardEl) return;
+
+  // Update subtitle to reflect the active dataset — same pattern
+  // as renderHotCold() / renderPatternStats() / renderDueScore()
+  const datasetLabels = {
+    last30:  'the last 30 draws',
+    last90:  'the last 90 draws',
+    alltime: 'all available draws',
+  };
+  const activeDataset = document.querySelector('.ds-btn.active')?.dataset.dataset || 'last30';
+  const descEl = document.getElementById('randomnessAuditDesc');
+  if (descEl) {
+    const label = datasetLabels[activeDataset] ?? 'the selected draws';
+    descEl.textContent =
+      `Chi-square goodness-of-fit test on the number frequencies in ${label} — describes the historical data, not a forecast.`;
+  }
+
+  if (!result) {
+    cardEl.innerHTML = `
+      <p class="randomness-audit-empty">Not enough historical draws yet for this dataset.</p>`;
+    return;
+  }
+
+  const { chiSquare, degreesOfFreedom, pValue, verdict } = result;
+  const flagged = pValue < 0.05;
+
+  cardEl.innerHTML = `
+    <div class="ra-stats-row">
+      <div class="ra-stat">
+        <span class="ra-stat-value">${chiSquare.toFixed(2)}</span>
+        <span class="ra-stat-label">Chi-square (χ²)</span>
+      </div>
+      <div class="ra-stat">
+        <span class="ra-stat-value">${degreesOfFreedom}</span>
+        <span class="ra-stat-label">Degrees of freedom</span>
+      </div>
+      <div class="ra-stat">
+        <span class="ra-stat-value ra-pvalue">${formatPValue(pValue)}</span>
+        <span class="ra-stat-label">p-value</span>
+      </div>
+    </div>
+    <p class="ra-verdict ${flagged ? 'ra-verdict-flagged' : 'ra-verdict-normal'}">${verdict}</p>
+    <details class="ra-explainer">
+      <summary>What does this mean?</summary>
+      <p>
+        A chi-square goodness-of-fit test compares how often each number
+        actually appeared in this dataset against how often it "should"
+        appear if every number were equally likely. A low p-value (below
+        0.05) means the observed pattern would be unusual for a truly
+        random process — but it describes this historical dataset only.
+        Every future draw remains an independent, random event no matter
+        what this test shows.
+      </p>
+    </details>`;
+}
+
+
 // ── Render Draw Table ────────────────────────────────────────
 // Entry point: resets to page 1 and renders the first page.
 

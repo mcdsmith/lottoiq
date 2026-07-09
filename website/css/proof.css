@@ -1,0 +1,243 @@
+/* ============================================================
+   LottoIQ — Proof (Randomness-in-Action Simulator)
+   Layout for the /proof/ hub page only: game/draw-count pickers,
+   Simulate button + progress readout, and the side-by-side
+   simulated/real comparison grid. New file, following the
+   one-file-per-feature-area convention (heatmap.css, generator.css,
+   gates.css). Uses tokens.css variables only — no hardcoded colors.
+   ============================================================ */
+
+/* ── Page header ── */
+.proof-header {
+  max-width: 760px;
+  margin: 0 auto 32px;
+  text-align: center;
+}
+
+.proof-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+
+.proof-title span { color: var(--gold); }
+
+.proof-sub {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* ── Controls card ── */
+.proof-controls {
+  background: var(--navy-2);
+  border: 1px solid var(--navy-4);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 24px;
+}
+
+.proof-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.proof-control-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Game picker — button group */
+.proof-game-picker,
+.proof-count-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: var(--navy-3);
+  border: 1px solid var(--navy-4);
+  border-radius: var(--radius-lg);
+  padding: 5px;
+  width: fit-content;
+}
+
+.proof-game-btn,
+.proof-count-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.proof-game-btn:hover,
+.proof-count-btn:hover {
+  color: var(--text);
+  background: var(--navy-4);
+}
+
+.proof-game-btn.active,
+.proof-count-btn.active {
+  background: var(--gold);
+  color: var(--navy);
+  font-weight: 600;
+}
+
+/* Actions — Simulate button + compare toggle */
+.proof-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.proof-compare-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.proof-compare-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+
+/* ── Progress readout ── */
+.proof-progress {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.proof-progress-bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: var(--navy-4);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.proof-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--gold);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+
+.proof-progress-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Results / comparison grid ── */
+.proof-results {
+  margin-bottom: 32px;
+}
+
+.proof-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+}
+
+/* Two columns once the "Compare against real history" toggle is on —
+   .proof-compare-active is added/removed by simulator.js's inline
+   controller, not written directly here, so it stays in sync with
+   #realCol's visibility without relying on a fragile attribute match. */
+.proof-compare-grid.proof-compare-active {
+  grid-template-columns: 1fr 1fr;
+}
+
+.proof-col {
+  min-width: 0; /* allow heatmap grid to shrink inside the column */
+}
+
+.proof-col-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.proof-col-loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.proof-subhead {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  margin: 24px 0 10px;
+}
+
+/* ── Disclaimer ── */
+.proof-disclaimer {
+  max-width: 760px;
+  margin: 0 auto 32px;
+  text-align: center;
+}
+
+/* ── Responsive — same breakpoint conventions as responsive.css ── */
+@media (max-width: 720px) {
+  .proof-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+  }
+
+  .proof-actions {
+    margin-left: 0;
+    justify-content: space-between;
+  }
+
+  .proof-compare-grid,
+  .proof-compare-grid.proof-compare-active {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .proof-title {
+    font-size: 24px;
+  }
+
+  .proof-game-picker,
+  .proof-count-picker {
+    width: 100%;
+  }
+
+  .proof-game-btn,
+  .proof-count-btn {
+    flex: 1;
+    text-align: center;
+  }
+}

@@ -72,6 +72,7 @@
   <div class="game-tab" data-game="lottario">Lottario</div>
   <div class="game-tab" data-game="ontario-49">Ontario 49</div>
   <div class="game-tab" data-game="custom">My Lottery</div>
+  <a href="/proof/" class="game-tab">Proof</a>
 </div>
 
 
@@ -228,8 +229,29 @@
   </div>
 
   <hr class="section-divider"/>
-  
-  
+
+
+  <!-- ── RANDOMNESS AUDIT ──────────────────────────────────── -->
+  <!-- Chi-square goodness-of-fit test on the active dataset's
+       number frequencies. Free/trust feature — no Insider gate.
+       Populated by renderRandomnessAudit() in render.js, computed
+       by computeRandomnessAudit() in analytics.js. Describes the
+       historical dataset only — not a prediction. -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">Randomness Audit</h2>
+      <span class="section-note">Statistical honesty, not a prediction</span>
+    </div>
+    <p class="section-desc" id="randomnessAuditDesc">Chi-square goodness-of-fit test on the number frequencies in the last 30 draws — describes the historical data, not a forecast.</p>
+    <div class="randomness-audit-card" id="randomnessAuditCard"></div>
+    <div class="proof-teaser">
+      <p>Curious what pure randomness actually looks like? <a href="/proof/">Watch simulated draws produce the same hot streaks →</a></p>
+    </div>
+  </div>
+
+  <hr class="section-divider"/>
+
+
   <!-- ── INSIDER GATE: TOP NUMBER PAIRS ───────────────────── -->
   <!-- Hidden for Insider users; replaced with actual pairs data -->
   <div class="insider-gate" id="pairsGate">

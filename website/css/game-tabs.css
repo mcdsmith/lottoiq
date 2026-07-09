@@ -27,6 +27,7 @@
   white-space: nowrap;
   transition: all 0.15s;
   user-select: none;
+  text-decoration: none; /* .game-tab is also used as a plain <a> (Proof tab) */
 }
 
 .game-tab:hover {

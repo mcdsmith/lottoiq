@@ -728,6 +728,104 @@ function computeDueScores(draws, cfg) {
 }
 
 
+// ── Compute Randomness Audit ──────────────────────────────────
+// Chi-square goodness-of-fit test on the active dataset's
+// frequency distribution: does this history of draws deviate
+// from what pure chance would produce, given how many draws
+// there are and how many numbers get drawn each time?
+//
+// This describes the HISTORICAL dataset only — it is not a
+// forecast. Every draw is independent regardless of what this
+// test reports; a "clustering" verdict here says nothing about
+// what will be drawn next.
+//
+// Expected count per number = (draws.length × cfg.numCols) / pool
+// size, where pool size = cfg.maxNum - (cfg.minNum ?? 1) + 1 —
+// i.e. an even split of all drawn numbers across the pool.
+// Chi-square statistic = Σ ((observed - expected)² / expected)
+// across every number in the pool. Degrees of freedom = pool
+// size - 1. Re-uses computeFreq() so the observed counts match
+// the Heatmap / Hot & Cold numbers exactly.
+//
+// The p-value is approximated with the Wilson–Hilferty cube-root
+// transform (chi-square → standard normal z), then a standard
+// normal CDF approximation — see chiSquarePValue() below. Pure
+// JS, no external stats library.
+//
+// Returns { chiSquare, degreesOfFreedom, pValue, verdict }, or
+// null if the slice has no draws.
+
+function computeRandomnessAudit(draws, cfg) {
+  if (!draws.length) return null;
+
+  const minNum   = cfg.minNum ?? 1;
+  const poolSize = cfg.maxNum - minNum + 1;
+  const freq     = computeFreq(draws, cfg.maxNum, minNum);
+
+  const expected = (draws.length * cfg.numCols) / poolSize;
+  let chiSquare = 0;
+  for (let i = minNum; i <= cfg.maxNum; i++) {
+    const observed = freq[i] || 0;
+    chiSquare += Math.pow(observed - expected, 2) / expected;
+  }
+
+  const degreesOfFreedom = poolSize - 1;
+  const pValue = chiSquarePValue(chiSquare, degreesOfFreedom);
+
+  // Threshold p < 0.05. Both branches describe the dataset, not
+  // a prediction — careful wording per the site-wide disclaimer.
+  const verdict = pValue < 0.05
+    ? `This dataset shows more clustering than expected by chance — p = ${formatPValue(pValue)}`
+    : `No statistically significant deviation from random — p = ${formatPValue(pValue)}`;
+
+  return { chiSquare, degreesOfFreedom, pValue, verdict };
+}
+
+
+// ── Chi-Square → p-value (Wilson–Hilferty approximation) ─────
+// Converts a chi-square statistic with k degrees of freedom into
+// an upper-tail p-value: P(chi-square_k >= chiSquare).
+//
+// Step 1 — Wilson–Hilferty cube-root transform: chi-square with
+// k df is approximately (9k) * ( (Z * sqrt(2/(9k)) + 1 - 2/(9k)) )^3
+// for standard normal Z, which we invert to get z from chiSquare.
+// This approximation is very accurate for df >= ~5 and reasonable
+// even below that — well within what a "here's the math" trust
+// feature needs.
+//
+// Step 2 — standard normal CDF approximation (Abramowitz & Stegun
+// 26.2.17), accurate to ~7.5e-8.
+//
+// Self-contained, no CDN dependency.
+
+function chiSquarePValue(chiSquare, df) {
+  if (df <= 0) return 1;
+
+  const h = 2 / (9 * df);
+  const z = (Math.pow(chiSquare / df, 1 / 3) - (1 - h)) / Math.sqrt(h);
+
+  // Standard normal CDF approximation
+  const t   = 1 / (1 + 0.2316419 * Math.abs(z));
+  const d   = 0.3989423 * Math.exp(-z * z / 2);
+  let cdf   = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 +
+              t * (-1.821256 + t * 1.330274))));
+  if (z > 0) cdf = 1 - cdf;
+
+  // p-value is the upper tail: P(Z > z)
+  const p = 1 - cdf;
+  return Math.min(1, Math.max(0, p));
+}
+
+
+// ── Format p-value for display ────────────────────────────────
+// Guards against showing "p = 0.000" for very small p-values.
+
+function formatPValue(p) {
+  if (p < 0.001) return '< 0.001';
+  return p.toFixed(3);
+}
+
+
 // ── Explain Generated Set ─────────────────────────────────────
 // Produces a rich, data-driven explanation of why a generated
 // set looks the way it does vs the active dataset patterns.

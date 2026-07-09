@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Randomness-in-Action Simulator — LottoIQ</title>
+  <meta name="robots" content="noindex, nofollow"/>
+  <meta name="description" content="Watch simulated random lottery draws produce the same hot/cold clustering as real draw history — a live, in-browser proof that randomness alone explains it. Member-only tool by LottoIQ.ca"/>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <!-- Supabase — must load before auth.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Styles — load in this exact order -->
+  <link rel="stylesheet" href="/css/tokens.css?v=20260709"/>
+  <link rel="stylesheet" href="/css/base.css?v=20260709"/>
+  <link rel="stylesheet" href="/css/nav.css?v=20260709"/>
+  <link rel="stylesheet" href="/css/game-tabs.css?v=20260709"/>
+  <link rel="stylesheet" href="/css/sections.css?v=20260709"/>
+  <link rel="stylesheet" href="/css/heatmap.css?v=20260709"/>
+  <link rel="stylesheet" href="/css/responsive.css?v=20260709"/>
+  <link rel="stylesheet" href="/css/proof.css?v=20260709"/>
+</head>
+<body>
+
+<!-- ============================================================
+     LOADING OVERLAY — hidden by default. This page has no bulk
+     data fetch on load (the simulator needs zero data), so it's
+     only shown briefly while the auth check runs.
+     ============================================================ -->
+<div id="loadingOverlay" style="display:none">
+  <div class="loading-logo">Lotto<span>IQ</span></div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Loading…</div>
+</div>
+
+
+<!-- ============================================================
+     MEMBER NAV — identical structure to the game pages.
+     ============================================================ -->
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="/">Lotto<span>IQ</span>.ca</a>
+    <div class="nav-right">
+      <span class="tier-badge standard">Standard</span>
+      <a class="nav-upgrade" href="/upgrade">Upgrade ↗</a>
+      <div class="nav-avatar">J</div>
+      <a class="nav-manage" href="javascript:void(0)" aria-label="Manage account">Manage Account</a>
+      <button class="nav-logout" id="logoutBtn" aria-label="Log out">Sign out</button>
+    </div>
+  </div>
+</nav>
+
+
+<!-- ============================================================
+     GAME TABS — identical markup to the other 5 pages, with the
+     Proof tab added as a plain <a> (not a data-game div) so it
+     never gets wired into initGameTabs()'s click handler and just
+     navigates normally. Marked active here since we're on /proof/.
+     ============================================================ -->
+<div class="game-tabs">
+  <div class="game-tab" data-game="lotto-649">Lotto 6/49</div>
+  <div class="game-tab" data-game="lotto-max">Lotto MAX</div>
+  <div class="game-tab" data-game="lottario">Lottario</div>
+  <div class="game-tab" data-game="ontario-49">Ontario 49</div>
+  <div class="game-tab" data-game="custom">My Lottery</div>
+  <a href="/proof/" class="game-tab active">Proof</a>
+</div>
+
+
+<!-- ============================================================
+     PAGE BODY
+     ============================================================ -->
+<div class="page-body">
+
+  <div class="proof-header">
+    <h1 class="proof-title">Randomness-in-<span>Action</span> Simulator</h1>
+    <p class="proof-sub">
+      Generate thousands of fake, computer-random draws right here in your browser and watch
+      them produce the exact same "hot streaks" and number clustering that show up in real draw
+      history. It's a live demonstration that clustering is simply what randomness looks like —
+      not a signal about which numbers come up next.
+    </p>
+  </div>
+
+
+  <!-- ── CONTROLS ─────────────────────────────────────────── -->
+  <div class="proof-controls">
+
+    <div class="proof-control-group">
+      <span class="proof-control-label">Game</span>
+      <div class="proof-game-picker" id="proofGamePicker">
+        <!-- Buttons injected by simulator page script, from GAME_CONFIG -->
+      </div>
+    </div>
+
+    <div class="proof-control-group">
+      <span class="proof-control-label">Draws to simulate</span>
+      <div class="proof-count-picker" id="proofCountPicker">
+        <button class="proof-count-btn active" data-count="1000" type="button">1,000 draws</button>
+        <button class="proof-count-btn" data-count="5000" type="button">5,000 draws</button>
+        <button class="proof-count-btn" data-count="10000" type="button">10,000 draws</button>
+      </div>
+    </div>
+
+    <div class="proof-actions">
+      <label class="proof-compare-toggle">
+        <input type="checkbox" id="compareToggle"/>
+        Compare against real history
+      </label>
+      <button class="btn-primary" id="simulateBtn" type="button">Simulate</button>
+    </div>
+
+    <!-- Progress readout — shown only while a simulation is running -->
+    <div class="proof-progress" id="proofProgress" style="display:none">
+      <div class="proof-progress-bar-wrap">
+        <div class="proof-progress-bar" id="proofProgressBar"></div>
+      </div>
+      <div class="proof-progress-text" id="proofProgressText">Simulating…</div>
+    </div>
+
+  </div><!-- /proof-controls -->
+
+
+  <!-- ── RESULTS ──────────────────────────────────────────── -->
+  <div class="proof-results" id="proofResults" style="display:none">
+
+    <div class="proof-compare-grid" id="proofCompareGrid">
+
+      <!-- Simulated column — always shown once a simulation has run -->
+      <div class="proof-col" id="simCol">
+        <div class="proof-col-header">
+          <h2 class="section-title">Simulated draws</h2>
+          <span class="section-note">Pure Math.random() — zero real draw data</span>
+        </div>
+        <p class="section-desc" id="simHeatmapDesc">Frequency heatmap of the simulated draws.</p>
+        <div class="heatmap-grid" id="simHeatmapGrid"></div>
+        <div class="hm-legend">
+          <span>Lower frequency</span>
+          <div class="hm-legend-dots"><span class="hm-legend-dot" style="background:#1a2e3b"></span><span class="hm-legend-dot" style="background:#1e4d5c"></span><span class="hm-legend-dot" style="background:#1f6b6e"></span><span class="hm-legend-dot" style="background:#1d8a72"></span><span class="hm-legend-dot" style="background:#3a9e68"></span><span class="hm-legend-dot" style="background:#6aab4e"></span><span class="hm-legend-dot" style="background:#a0b83a"></span><span class="hm-legend-dot" style="background:#d4a020"></span><span class="hm-legend-dot" style="background:#e63c00"></span></div>
+          <span>Higher frequency</span>
+        </div>
+
+        <h3 class="proof-subhead">Randomness Audit — simulated data</h3>
+        <p class="section-desc">Same chi-square goodness-of-fit test used on real draw history, run on the fake data above.</p>
+        <div class="randomness-audit-card" id="simAuditCard"></div>
+      </div>
+
+      <!-- Real-history column — hidden until "Compare against real
+           history" is switched on. Reuses draws already fetched by
+           fetchAllRecords() elsewhere on the site (cached after the
+           first fetch) — no new backend call. -->
+      <div class="proof-col" id="realCol" style="display:none">
+        <div class="proof-col-header">
+          <h2 class="section-title">Real draw history</h2>
+          <span class="section-note">Last 90 real draws for this game</span>
+        </div>
+        <p class="section-desc" id="realHeatmapDesc">Frequency heatmap of real historical draws.</p>
+        <div class="heatmap-grid" id="realHeatmapGrid"></div>
+        <div class="hm-legend">
+          <span>Lower frequency</span>
+          <div class="hm-legend-dots"><span class="hm-legend-dot" style="background:#1a2e3b"></span><span class="hm-legend-dot" style="background:#1e4d5c"></span><span class="hm-legend-dot" style="background:#1f6b6e"></span><span class="hm-legend-dot" style="background:#1d8a72"></span><span class="hm-legend-dot" style="background:#3a9e68"></span><span class="hm-legend-dot" style="background:#6aab4e"></span><span class="hm-legend-dot" style="background:#a0b83a"></span><span class="hm-legend-dot" style="background:#d4a020"></span><span class="hm-legend-dot" style="background:#e63c00"></span></div>
+          <span>Higher frequency</span>
+        </div>
+
+        <h3 class="proof-subhead">Randomness Audit — real history</h3>
+        <p class="section-desc">Same test, same math, run on this game's actual last 90 draws.</p>
+        <div class="randomness-audit-card" id="realAuditCard"></div>
+      </div>
+
+    </div><!-- /proof-compare-grid -->
+  </div><!-- /proof-results -->
+
+
+  <p class="generator-disclaimer proof-disclaimer">
+    This simulator generates fake draws using your browser's own random number generator — by
+    default it uses zero real lottery data. Clustering, "hot" numbers, and "cold" numbers show up
+    in random data too; that's what randomness looks like, not evidence of a pattern to exploit.
+    Every real lottery draw remains an independent, random event no matter what any dataset —
+    real or simulated — shows on this page.
+  </p>
+
+
+  <!-- ── DATA TRANSPARENCY & RESPONSIBILITY ───────────────── -->
+  <div class="transparency">
+    <h3>Data transparency &amp; responsibility</h3>
+    <ul>
+      <li>The simulator itself uses no real draw data — every simulated draw comes from your browser's random number generator, generated fresh each run.</li>
+      <li>The optional "Compare against real history" view reuses draw data already fetched elsewhere on LottoIQ. No new data collection or backend calls are involved.</li>
+      <li>Statistics shown here are for entertainment and educational purposes only — they do not predict future draws.</li>
+      <li>If gambling is affecting you or someone you know, visit <a href="https://www.connexontario.ca">ConnexOntario.ca</a> or call 1-866-531-2600.</li>
+    </ul>
+  </div>
+
+</div><!-- /page-body -->
+
+
+<!-- ============================================================
+     SCRIPTS
+     auth.js/config.js/gsheets.js/analytics.js are shared modules
+     this page reuses (unchanged). ui.js supplies initGameTabs() so
+     the other tabs still navigate correctly. render.js/generator.js
+     are intentionally NOT loaded — this page doesn't use the
+     draw-table/generator features they support. main.js is also
+     intentionally NOT loaded: its DOMContentLoaded handler assumes
+     a single active GAME_URL_MAP game via switchGame(), which
+     doesn't apply to this page — auth is wired manually below,
+     same pattern as games/custom/index.html.
+     ============================================================ -->
+<script src="/js/auth.js?v=20260709"></script>
+<script src="/js/config.js?v=20260709"></script>
+<script src="/js/gsheets.js?v=20260709"></script>
+<script src="/js/analytics.js?v=20260709"></script>
+<script src="/js/ui.js?v=20260709"></script>
+<script src="/js/simulator.js?v=20260709"></script>
+
+<script>
+// ============================================================
+// Proof page controller — inline, page-specific (mirrors the
+// pattern in games/custom/index.html, which keeps its own logic
+// inline rather than in the shared JS files).
+// ============================================================
+
+const PROOF_GAMES = ['lotto649', 'lottoMax', 'lottario', 'ontario49'];
+
+let proofSelectedGame    = 'lotto649';
+let proofSelectedCount   = 1000;
+let proofRealRenderedFor = null; // gameKey the real-history column currently reflects
+
+// ── Game picker ───────────────────────────────────────────────
+function buildProofGamePicker() {
+  const wrap = document.getElementById('proofGamePicker');
+  wrap.innerHTML = '';
+
+  PROOF_GAMES.forEach(key => {
+    const cfg = GAME_CONFIG[key];
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'proof-game-btn' + (key === proofSelectedGame ? ' active' : '');
+    btn.textContent = cfg.label; // reuse cfg.label for display text
+    btn.dataset.game = key;
+
+    btn.addEventListener('click', () => {
+      if (proofSelectedGame === key) return;
+      proofSelectedGame = key;
+
+      document.querySelectorAll('.proof-game-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Stale results belong to the old game — hide until re-simulated
+      document.getElementById('proofResults').style.display = 'none';
+      proofRealRenderedFor = null;
+    });
+
+    wrap.appendChild(btn);
+  });
+}
+
+// ── Draw-count picker ─────────────────────────────────────────
+function wireProofCountPicker() {
+  document.querySelectorAll('.proof-count-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      proofSelectedCount = parseInt(btn.dataset.count, 10);
+      document.querySelectorAll('.proof-count-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+}
+
+// ── Real-history column ────────────────────────────────────────
+// Fetches (or reuses the cached) real draws for the given game,
+// slices to the last 90, and renders its heatmap + chi-square card
+// using the same computeFreq()/computeRandomnessAudit() calls the
+// simulated side uses — just against real data.
+async function renderProofRealColumn(gameKey) {
+  const cfg     = GAME_CONFIG[gameKey];
+  const records = await fetchAllRecords(gameKey); // cached after first fetch — same call switchGame() makes
+  const draws   = records.map(r => parseRecord(r, cfg.numCols));
+  const real90  = sliceByDataset(draws, 'last90');
+  const realFreq = computeFreq(real90, cfg.maxNum, cfg.minNum ?? 1);
+
+  renderSimHeatmap(realFreq, cfg, 'realHeatmapGrid');
+  renderSimAudit(computeRandomnessAudit(real90, cfg), 'realAuditCard');
+
+  document.getElementById('realHeatmapDesc').textContent =
+    `Frequency heatmap of the last 90 real ${cfg.label} draws.`;
+
+  proofRealRenderedFor = gameKey;
+}
+
+// ── Compare toggle ─────────────────────────────────────────────
+function wireProofCompareToggle() {
+  const toggle = document.getElementById('compareToggle');
+  const grid   = document.getElementById('proofCompareGrid');
+  const realCol = document.getElementById('realCol');
+
+  toggle.addEventListener('change', async () => {
+    if (!toggle.checked) {
+      realCol.style.display = 'none';
+      grid.classList.remove('proof-compare-active');
+      return;
+    }
+
+    realCol.style.display = 'block';
+    grid.classList.add('proof-compare-active');
+
+    // Reuse cached allDrawsData instead of re-fetching on repeated toggles
+    if (proofRealRenderedFor !== proofSelectedGame) {
+      realCol.classList.add('proof-col-loading');
+      try {
+        await renderProofRealColumn(proofSelectedGame);
+      } catch (err) {
+        console.error('[Proof] Failed to load real draw data:', err);
+      } finally {
+        realCol.classList.remove('proof-col-loading');
+      }
+    }
+  });
+}
+
+// ── Simulate button ───────────────────────────────────────────
+function wireProofSimulateButton() {
+  const btn          = document.getElementById('simulateBtn');
+  const progressWrap = document.getElementById('proofProgress');
+  const progressBar  = document.getElementById('proofProgressBar');
+  const progressText = document.getElementById('proofProgressText');
+
+  btn.addEventListener('click', () => {
+    const cfg   = GAME_CONFIG[proofSelectedGame];
+    const total = proofSelectedCount;
+
+    btn.disabled = true;
+    document.getElementById('proofResults').style.display = 'none';
+    progressWrap.style.display = 'flex';
+    progressBar.style.width = '0%';
+    progressText.textContent = `Simulating… 0 / ${total.toLocaleString()} draws`;
+
+    runChunked(cfg, total, (done, tot) => {
+      const pct = Math.round((done / tot) * 100);
+      progressBar.style.width = `${pct}%`;
+      progressText.textContent = `Simulating… ${done.toLocaleString()} / ${tot.toLocaleString()} draws`;
+    }, async (allDraws) => {
+      const freq = computeFreq(allDraws, cfg.maxNum, cfg.minNum ?? 1);
+      renderSimHeatmap(freq, cfg, 'simHeatmapGrid');
+      renderSimAudit(computeRandomnessAudit(allDraws, cfg), 'simAuditCard');
+
+      document.getElementById('simHeatmapDesc').textContent =
+        `Frequency heatmap of ${total.toLocaleString()} simulated ${cfg.label} draws.`;
+
+      progressWrap.style.display = 'none';
+      document.getElementById('proofResults').style.display = 'block';
+      btn.disabled = false;
+
+      // Refresh the compare column too, if it's toggled on
+      const toggle = document.getElementById('compareToggle');
+      if (toggle.checked && proofRealRenderedFor !== proofSelectedGame) {
+        const realCol = document.getElementById('realCol');
+        realCol.classList.add('proof-col-loading');
+        try {
+          await renderProofRealColumn(proofSelectedGame);
+        } catch (err) {
+          console.error('[Proof] Failed to load real draw data:', err);
+        } finally {
+          realCol.classList.remove('proof-col-loading');
+        }
+      }
+    });
+  });
+}
+
+function initProofPage() {
+  buildProofGamePicker();
+  wireProofCountPicker();
+  wireProofCompareToggle();
+  wireProofSimulateButton();
+}
+
+// ── Auth — required like the rest of the member portal ────────
+// main.js's DOMContentLoaded handler assumes a single active
+// GAME_URL_MAP game and doesn't apply to this page, so auth is
+// wired manually here (same pattern as games/custom/index.html).
+document.addEventListener('DOMContentLoaded', async () => {
+  // Wire the game tabs so members can navigate to the other games.
+  // The Proof tab is a plain <a>, not a data-game div, so it's
+  // never touched by initGameTabs()'s click handler — it just
+  // navigates via the browser's default anchor behaviour. We
+  // don't call setActiveTabFromURL() here since it would clear the
+  // Proof tab's hardcoded "active" class (it has no data-game).
+  initGameTabs();
+
+  const memberData = await initAuth();
+  if (!memberData) return; // redirect to /signin already in progress
+
+  initProofPage();
+});
+</script>
+
+</body>
+</html>

@@ -386,6 +386,134 @@
   text-decoration: underline;
 }
 
+/* ── Randomness Audit ── */
+.randomness-audit-card {
+  background: var(--navy-2);
+  border: 1px solid var(--navy-4);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.randomness-audit-empty {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-style: italic;
+  padding: 12px 0;
+}
+
+.ra-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  margin-bottom: 16px;
+}
+
+.ra-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ra-stat-value {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ra-stat-value.ra-pvalue {
+  color: var(--gold);
+}
+
+.ra-stat-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ra-verdict {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--navy-4);
+  background: var(--navy-3);
+  color: var(--text-muted);
+}
+
+/* p < 0.05 — flagged as a notable deviation, still not a prediction */
+.ra-verdict-flagged {
+  border-color: var(--gold-bd);
+  background: var(--gold-glow);
+  color: var(--gold);
+}
+
+.ra-verdict-normal {
+  border-color: var(--navy-4);
+  color: var(--text-muted);
+}
+
+.ra-explainer {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.ra-explainer summary {
+  cursor: pointer;
+  color: var(--cold-clr);
+  font-weight: 500;
+  list-style: none;
+}
+
+.ra-explainer summary::-webkit-details-marker {
+  display: none;
+}
+
+.ra-explainer summary::before {
+  content: "▸ ";
+}
+
+.ra-explainer[open] summary::before {
+  content: "▾ ";
+}
+
+.ra-explainer p {
+  margin-top: 8px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* ── Proof teaser (Randomness-in-Action Simulator link-out) ── */
+/* Small card placed on the Randomness Audit section of the 4
+   built-in game pages, pointing members to /proof/. Reuses the
+   same card look as .randomness-audit-card rather than inventing
+   a new visual language. */
+.proof-teaser {
+  background: var(--navy-2);
+  border: 1px solid var(--navy-4);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  margin-top: 16px;
+}
+
+.proof-teaser p {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.proof-teaser a {
+  color: var(--gold);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.proof-teaser a:hover {
+  text-decoration: underline;
+}
+
 /* ── Top Pairs (Insider unlock) ── */
 .pairs-grid {
   display: grid;

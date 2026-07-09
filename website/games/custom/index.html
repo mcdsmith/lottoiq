@@ -248,6 +248,7 @@
   <div class="game-tab" data-game="lottario">Lottario</div>
   <div class="game-tab" data-game="ontario-49">Ontario 49</div>
   <div class="game-tab active" data-game="custom">My Lottery</div>
+  <a href="/proof/" class="game-tab">Proof</a>
 </div>
 
 
@@ -463,6 +464,25 @@
       <p class="due-score-empty" id="dueScoreEmpty" style="display:none">Not enough draws yet for this dataset — Due Score needs at least 20.</p>
       <div class="due-score-grid" id="dueScoreList"></div>
       <div class="due-score-note" id="dueScoreNote" style="display:none">Showing top 5 · <a href="/upgrade">Unlock the top 10 and full signal breakdown with Insider</a></div>
+    </div>
+
+    <hr class="section-divider"/>
+
+    <!-- ── RANDOMNESS AUDIT ──────────────────────────────────── -->
+    <!-- Chi-square goodness-of-fit test on the active dataset's
+         number frequencies. Free/trust feature — this page is
+         already Insider-gated above, but the audit itself carries
+         no additional tier gating. Populated by
+         renderRandomnessAudit() in render.js, computed by
+         computeRandomnessAudit() in analytics.js. Describes the
+         historical dataset only — not a prediction. -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Randomness Audit</h2>
+        <span class="section-note">Statistical honesty, not a prediction</span>
+      </div>
+      <p class="section-desc" id="randomnessAuditDesc">Chi-square goodness-of-fit test on the number frequencies in the last 30 draws — describes the historical data, not a forecast.</p>
+      <div class="randomness-audit-card" id="randomnessAuditCard"></div>
     </div>
 
     <hr class="section-divider"/>
@@ -870,6 +890,11 @@ function runCustomAnalysis() {
   // page is Insider-only (see auth check below), so renderDueScore()
   // will always render the top 10 + full breakdown.
   renderDueScore(computeDueScores(statsDraws, cfg), cfg);
+
+  // Randomness Audit — chi-square goodness-of-fit on the same
+  // dataset slice used above. Free/trust feature, no gating.
+  renderRandomnessAudit(computeRandomnessAudit(statsDraws, cfg));
+
   renderCustomDrawTable(draws);
   initCheckMyNumbers(draws, cfg);
   populateTopPairs(draws, cfg);
@@ -891,6 +916,10 @@ function runCustomAnalysis() {
       // Due Score must be recomputed on every dataset switch too —
       // its lambda depends on the slice size (last30/last90/alltime).
       renderDueScore(computeDueScores(sd, cfg), cfg);
+
+      // Randomness Audit must also be recomputed on every dataset
+      // switch — the chi-square test runs against this same slice.
+      renderRandomnessAudit(computeRandomnessAudit(sd, cfg));
 
       // Update Auto hints
       const hints = computeDatasetHints(sd, cfg);

@@ -60,6 +60,10 @@ async function switchGame(gameKey) {
     // since its lambda auto-selects based on that slice's size.
     renderDueScore(computeDueScores(statsDraws, cfg), cfg);
 
+    // Randomness Audit — chi-square goodness-of-fit on the same
+    // dataset slice used above. Free/trust feature, no gating.
+    renderRandomnessAudit(computeRandomnessAudit(statsDraws, cfg));
+
     renderDrawTable(draws);
 
     // Wire the "Did my numbers ever win?" checker
@@ -130,6 +134,10 @@ function initDatasetSelector() {
       // Due Score must be recomputed on every dataset switch too —
       // its lambda depends on the slice size (last30/last90/alltime).
       renderDueScore(computeDueScores(statsDraws, cfg), cfg);
+
+      // Randomness Audit must also be recomputed on every dataset
+      // switch — the chi-square test runs against this same slice.
+      renderRandomnessAudit(computeRandomnessAudit(statsDraws, cfg));
 
       // Recalculate Auto mode hints for the new dataset slice
       if (window.LottoIQTier === 'insider') {
