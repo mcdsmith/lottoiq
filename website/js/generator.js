@@ -58,6 +58,150 @@ function generateOneSet(cfg, weights, lockedPool, sumMin, sumMax, oddEvenPref, l
 }
 
 
+// ── Generate a bonus number that never duplicates the main set ──
+// Draws a random value in [1, cfg.maxNum], re-rolling on collision
+// with any number already in `nums`. Falls back to a deterministic
+// scan if bad luck (or a very small maxNum) exhausts random attempts.
+
+function generateBonus(nums, cfg, maxAttempts = 100) {
+  const used = new Set(nums);
+  for (let i = 0; i < maxAttempts; i++) {
+    const candidate = Math.floor(Math.random() * cfg.maxNum) + 1;
+    if (!used.has(candidate)) return candidate;
+  }
+  // Fallback: first unused number in range (guards tiny/degenerate maxNum cases)
+  for (let n = 1; n <= cfg.maxNum; n++) {
+    if (!used.has(n)) return n;
+  }
+  return null; // Every number in range is already used (shouldn't happen in practice)
+}
+
+
+// ── Diagnose why generation failed ───────────────────────────
+// Runs two passes:
+//  1. Structural checks — math that proves a filter is IMPOSSIBLE
+//     given the currently locked numbers (exact, instant, no guessing).
+//  2. Empirical fallback — if no single filter is structurally
+//     impossible, the combination is just too tight. Re-runs the
+//     generator with each filter relaxed one at a time (small attempt
+//     budget) to see which relaxation(s) actually unblock it.
+// Returns an array of human-readable issue strings.
+
+function diagnoseGenerationFailure(cfg, weights, lockedPool, sumMin, sumMax, oddEvenPref, lowHighPref, spreadPref, spreadNarrowMax, spreadWideMin, neverAppeared) {
+  const issues = [];
+  const locked = Array.from(lockedPool);
+  const lockedCount = locked.length;
+  const minNum = cfg.minNum ?? 1;
+  const maxNum = cfg.maxNum;
+  const numCols = cfg.numCols;
+
+  // 1. Too many numbers locked for this game
+  if (lockedCount > numCols) {
+    return [`You've locked ${lockedCount} numbers (${locked.join(', ')}) but ${numCols} is all this game draws. Remove ${lockedCount - numCols} lock${lockedCount - numCols > 1 ? 's' : ''} — from Overdue Numbers, My Numbers, or the Top Pair — before generating.`];
+  }
+
+  const remainingSlots = numCols - lockedCount;
+  const poolAvailable = [];
+  for (let n = minNum; n <= maxNum; n++) if (!lockedPool.has(n)) poolAvailable.push(n);
+
+  // 2. Sum range vs. locked numbers
+  if (lockedCount > 0) {
+    const lockedSum  = locked.reduce((a, b) => a + b, 0);
+    const ascPool     = [...poolAvailable].sort((a, b) => a - b);
+    const descPool    = [...poolAvailable].sort((a, b) => b - a);
+    const minPossible = lockedSum + ascPool.slice(0, remainingSlots).reduce((a, b) => a + b, 0);
+    const maxPossible = lockedSum + descPool.slice(0, remainingSlots).reduce((a, b) => a + b, 0);
+
+    if (minPossible > sumMax) {
+      issues.push(`Your locked numbers (${locked.join(', ')}) already put the lowest possible total at ${minPossible} — above your Sum Range max of ${sumMax}. Raise Sum Range to at least ${minPossible}, or remove a lock.`);
+    } else if (maxPossible < sumMin) {
+      issues.push(`Your locked numbers (${locked.join(', ')}) cap the highest possible total at ${maxPossible} — below your Sum Range min of ${sumMin}. Lower Sum Range to ${maxPossible} or below, or remove a lock.`);
+    }
+  }
+
+  // 3. Odd/Even Balance vs. locked numbers
+  if (oddEvenPref !== 'any') {
+    const reqOdd  = Number(oddEvenPref.split('-')[0]);
+    const reqEven = numCols - reqOdd;
+    const lockedOdd  = locked.filter(n => n % 2 !== 0).length;
+    const lockedEven = lockedCount - lockedOdd;
+    if (lockedOdd > reqOdd) {
+      issues.push(`Your locked numbers include ${lockedOdd} odd number${lockedOdd > 1 ? 's' : ''}, but Odd/Even Balance only allows ${reqOdd}. Set Odd/Even Balance to "Any", or remove an odd lock.`);
+    } else if (lockedEven > reqEven) {
+      issues.push(`Your locked numbers include ${lockedEven} even number${lockedEven > 1 ? 's' : ''}, but Odd/Even Balance only allows ${reqEven}. Set Odd/Even Balance to "Any", or remove an even lock.`);
+    }
+  }
+
+  // 4. Low/High Balance vs. locked numbers
+  if (lowHighPref !== 'any') {
+    const reqLow  = Number(lowHighPref.split('-')[0]);
+    const reqHigh = numCols - reqLow;
+    const lockedLow  = locked.filter(n => n <= cfg.lowMid).length;
+    const lockedHigh = lockedCount - lockedLow;
+    if (lockedLow > reqLow) {
+      issues.push(`Your locked numbers include ${lockedLow} low number${lockedLow > 1 ? 's' : ''} (${minNum}–${cfg.lowMid}), but Low/High Balance only allows ${reqLow}. Set Low/High Balance to "Any", or remove a low lock.`);
+    } else if (lockedHigh > reqHigh) {
+      issues.push(`Your locked numbers include ${lockedHigh} high number${lockedHigh > 1 ? 's' : ''} (${cfg.lowMid + 1}–${maxNum}), but Low/High Balance only allows ${reqHigh}. Set Low/High Balance to "Any", or remove a high lock.`);
+    }
+  }
+
+  // 5. Spread vs. locked numbers
+  if (spreadPref !== 'any' && lockedCount >= 2) {
+    const lockedSpread = Math.max(...locked) - Math.min(...locked);
+    if (spreadPref === 'narrow' && lockedSpread > spreadNarrowMax) {
+      issues.push(`Your locked numbers already span ${lockedSpread} (${Math.min(...locked)}–${Math.max(...locked)}), wider than the Narrow spread limit of ${spreadNarrowMax}. Set Spread to "Any", or remove a lock.`);
+    }
+    if (spreadPref === 'wide' && remainingSlots === 0 && lockedSpread < spreadWideMin) {
+      issues.push(`Your locked numbers fill every slot and only span ${lockedSpread}, short of the Wide spread minimum of ${spreadWideMin}. Set Spread to "Any", or remove a lock.`);
+    }
+  }
+
+  // If a structural impossibility was found, that's the real answer — return it.
+  if (issues.length) return issues;
+
+  // Nothing is outright impossible on its own — the combination is just too
+  // tight for the random search. Empirically test relaxing one filter at a
+  // time to find what actually unblocks it.
+  const testRelax = (overrides) => generateOneSet(
+    cfg, weights, lockedPool,
+    overrides.sumMin ?? sumMin,
+    overrides.sumMax ?? sumMax,
+    overrides.oddEvenPref ?? oddEvenPref,
+    overrides.lowHighPref ?? lowHighPref,
+    overrides.spreadPref ?? spreadPref,
+    spreadNarrowMax, spreadWideMin,
+    300
+  ) !== null;
+
+  const helpful = [];
+  if ((sumMin !== cfg.sumRange[0] || sumMax !== cfg.sumRange[1]) &&
+      testRelax({ sumMin: cfg.sumRange[0], sumMax: cfg.sumRange[1] })) {
+    helpful.push('widening the Sum Range');
+  }
+  if (oddEvenPref !== 'any' && testRelax({ oddEvenPref: 'any' })) {
+    helpful.push('setting Odd/Even Balance to "Any"');
+  }
+  if (lowHighPref !== 'any' && testRelax({ lowHighPref: 'any' })) {
+    helpful.push('setting Low/High Balance to "Any"');
+  }
+  if (spreadPref !== 'any' && testRelax({ spreadPref: 'any' })) {
+    helpful.push('setting Spread to "Any"');
+  }
+
+  if (helpful.length) {
+    issues.push(`No single setting is impossible on its own, but together they're too tight. Try ${helpful.join(', or ')}.`);
+  } else if (neverAppeared) {
+    issues.push(`"Never drawn before" is filtering out nearly every combination that fits your other settings. Try unchecking it, or loosening another filter alongside it.`);
+  } else if (lockedCount > 0) {
+    issues.push(`The combination of your locked numbers (${locked.join(', ')}) and current filters has very few — possibly zero — valid matches. Try removing a lock or loosening more than one filter.`);
+  } else {
+    issues.push(`Your current filter combination has very few valid matches. Try loosening the Sum Range, Odd/Even Balance, or Low/High Balance.`);
+  }
+
+  return issues;
+}
+
+
 // ── Build explanation for one set ────────────────────────────
 
 function buildWhyBox(nums, cfg, sumMin, sumMax, overdueCount) {
@@ -105,7 +249,7 @@ function logGeneratedSet(cfg, nums, bonus) {
 // ── Render a single set card ──────────────────────────────────
 
 function renderSetCard(nums, cfg, setIndex, totalSets, sumMin, sumMax, overdueCount, bonus) {
-  if (bonus === undefined) bonus = Math.floor(Math.random() * cfg.maxNum) + 1;
+  if (bonus === undefined) bonus = generateBonus(nums, cfg);
 
   const ballsHtml = nums.map(n =>
     `<div class="result-ball">${n}</div>`
@@ -249,37 +393,57 @@ function generateNumbers() {
 
     if (numSets === 1) {
       // ── Single set — original layout ──────────────────────
-      const nums  = sets[0] || [];
-      const bonus = Math.floor(Math.random() * cfg.maxNum) + 1;
-
-      resultBalls.innerHTML = nums.map(n =>
-        `<div class="result-ball">${n}</div>`
-      ).join('') + `<div class="result-ball bonus">${bonus}</div>`;
-
-      // Log this set (fire-and-forget) — Feature 3, Part A
-      if (nums.length) logGeneratedSet(cfg, nums, bonus);
-
-      // Gather filter context for explanation
-      const _statsDraws = sliceByDataset(
-        allDrawsData[currentGame].map(r => parseRecord(r, cfg.numCols)),
-        currentDataset
-      );
-      const _filters = {
-        sumMin, sumMax, sumRangeBucket, oddEvenPref, lowHighPref, spreadPref,
-        overdueCount, neverAppeared,
-        topPair: topPairEl ? topPairEl.value : 'none',
-        myNums:  loadMyNumbers().filter(n => n >= 0 && n <= cfg.maxNum),
-      };
-      document.getElementById('whyBox').innerHTML =
-        explainGeneratedSet(nums, _statsDraws, cfg, _filters);
-
-      // Show single-set action buttons
-      document.getElementById('savePickBtn').style.display = '';
-      document.getElementById('copyNumsBtn').style.display = '';
+      const nums = sets[0];
 
       // Hide multi-set container if it exists
       const multiWrap = document.getElementById('multiSetsWrap');
       if (multiWrap) multiWrap.style.display = 'none';
+
+      if (!nums) {
+        // Generation failed for every attempt — diagnose why instead of
+        // silently rendering an empty/broken set.
+        const issues = diagnoseGenerationFailure(
+          cfg, weights, lockedPool, sumMin, sumMax, oddEvenPref, lowHighPref,
+          spreadPref, spreadNarrowMax, spreadWideMin, neverAppeared
+        );
+        resultBalls.innerHTML = '';
+        document.getElementById('whyBox').innerHTML = `
+          <div class="gen-fail-notice">
+            <strong>Couldn't generate a set matching your filters after 1,000 attempts.</strong>
+            <ul class="gen-fail-reasons">
+              ${issues.map(i => `<li>${i}</li>`).join('')}
+            </ul>
+          </div>`;
+        document.getElementById('savePickBtn').style.display = 'none';
+        document.getElementById('copyNumsBtn').style.display = 'none';
+      } else {
+        const bonus = generateBonus(nums, cfg);
+
+        resultBalls.innerHTML = nums.map(n =>
+          `<div class="result-ball">${n}</div>`
+        ).join('') + `<div class="result-ball bonus">${bonus}</div>`;
+
+        // Log this set (fire-and-forget) — Feature 3, Part A
+        logGeneratedSet(cfg, nums, bonus);
+
+        // Gather filter context for explanation
+        const _statsDraws = sliceByDataset(
+          allDrawsData[currentGame].map(r => parseRecord(r, cfg.numCols)),
+          currentDataset
+        );
+        const _filters = {
+          sumMin, sumMax, sumRangeBucket, oddEvenPref, lowHighPref, spreadPref,
+          overdueCount, neverAppeared,
+          topPair: topPairEl ? topPairEl.value : 'none',
+          myNums:  loadMyNumbers().filter(n => n >= 0 && n <= cfg.maxNum),
+        };
+        document.getElementById('whyBox').innerHTML =
+          explainGeneratedSet(nums, _statsDraws, cfg, _filters);
+
+        // Show single-set action buttons
+        document.getElementById('savePickBtn').style.display = '';
+        document.getElementById('copyNumsBtn').style.display = '';
+      }
 
     } else {
       // ── Multiple sets — card layout ───────────────────────
@@ -301,7 +465,7 @@ function generateNumbers() {
 
       // Pre-compute each card's bonus so the same value is used for
       // rendering, the copy button, and the logged row below.
-      const setBonuses = sets.map(() => Math.floor(Math.random() * cfg.maxNum) + 1);
+      const setBonuses = sets.map(nums => generateBonus(nums, cfg));
 
       multiWrap.innerHTML = sets.map((nums, i) =>
         renderSetCard(nums, cfg, i, sets.length, sumMin, sumMax, overdueCount, setBonuses[i])
@@ -312,10 +476,16 @@ function generateNumbers() {
 
       // Failure notice
       if (failed.length) {
+        const issues = diagnoseGenerationFailure(
+          cfg, weights, lockedPool, sumMin, sumMax, oddEvenPref, lowHighPref,
+          spreadPref, spreadNarrowMax, spreadWideMin, neverAppeared
+        );
         multiWrap.innerHTML += `
           <div class="gen-fail-notice">
-            ${failed.length} set(s) couldn't satisfy your filters after 1,000 attempts.
-            Try loosening the sum range or odd/even balance.
+            <strong>${failed.length} set(s) couldn't satisfy your filters after 1,000 attempts.</strong>
+            <ul class="gen-fail-reasons">
+              ${issues.map(i => `<li>${i}</li>`).join('')}
+            </ul>
           </div>`;
       }
 
