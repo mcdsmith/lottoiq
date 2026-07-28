@@ -240,6 +240,9 @@ function unlockInsiderUI() {
   if (spreadFilterGroup) spreadFilterGroup.style.display = 'block';
   if (spreadFilter)      spreadFilter.disabled = false;
 
+  const weightMode = document.getElementById('weightMode');
+  if (weightMode) weightMode.disabled = false;
+
   if (typeof initGeneratorMode === 'function') initGeneratorMode();
 }
 

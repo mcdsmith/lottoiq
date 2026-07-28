@@ -15,7 +15,7 @@
 // Pure logic — no DOM access. Returns sorted number array
 // or null if constraints couldn't be satisfied in maxAttempts.
 
-function generateOneSet(cfg, weights, lockedPool, sumMin, sumMax, oddEvenPref, lowHighPref, spreadPref = 'any', _spreadNarrowMax = 999, _spreadWideMin = 0, maxAttempts = 1000) {
+function generateOneSet(cfg, weights, lockedPool, sumMin, sumMax, oddEvenPref, lowHighPref, spreadPref = 'any', _spreadNarrowMax = 999, _spreadWideMin = 0, maxAttempts = 1000, skewExponent = 1.5) {
   let attempts = 0;
 
   while (attempts < maxAttempts) {
@@ -23,7 +23,14 @@ function generateOneSet(cfg, weights, lockedPool, sumMin, sumMax, oddEvenPref, l
     const tryPool = new Set(lockedPool);
 
     while (tryPool.size < cfg.numCols) {
-      const idx = Math.floor(Math.pow(Math.random(), 1.5) * weights.length);
+      // skewExponent > 1 biases toward the front of `weights` (low index).
+      // Combined with how `weights` was sorted upstream, this is what makes
+      // a given weight MODE (hot/cold) actually bias number selection:
+      //   - weights sorted hottest-first  -> low index = hottest numbers
+      //   - weights sorted coldest-first  -> low index = coldest numbers
+      // skewExponent = 1 (neutral mode) removes the bias entirely — every
+      // number in the pool is equally likely regardless of sort order.
+      const idx = Math.floor(Math.pow(Math.random(), skewExponent) * weights.length);
       tryPool.add(weights[idx].n);
     }
 
@@ -87,7 +94,7 @@ function generateBonus(nums, cfg, maxAttempts = 100) {
 //     budget) to see which relaxation(s) actually unblock it.
 // Returns an array of human-readable issue strings.
 
-function diagnoseGenerationFailure(cfg, weights, lockedPool, sumMin, sumMax, oddEvenPref, lowHighPref, spreadPref, spreadNarrowMax, spreadWideMin, neverAppeared) {
+function diagnoseGenerationFailure(cfg, weights, lockedPool, sumMin, sumMax, oddEvenPref, lowHighPref, spreadPref, spreadNarrowMax, spreadWideMin, neverAppeared, skewExponent = 1.5) {
   const issues = [];
   const locked = Array.from(lockedPool);
   const lockedCount = locked.length;
@@ -170,7 +177,7 @@ function diagnoseGenerationFailure(cfg, weights, lockedPool, sumMin, sumMax, odd
     overrides.lowHighPref ?? lowHighPref,
     overrides.spreadPref ?? spreadPref,
     spreadNarrowMax, spreadWideMin,
-    300
+    300, skewExponent
   ) !== null;
 
   const helpful = [];
@@ -204,7 +211,7 @@ function diagnoseGenerationFailure(cfg, weights, lockedPool, sumMin, sumMax, odd
 
 // ── Build explanation for one set ────────────────────────────
 
-function buildWhyBox(nums, cfg, sumMin, sumMax, overdueCount) {
+function buildWhyBox(nums, cfg, sumMin, sumMax, overdueCount, weightMode = 'hot') {
   const sum  = nums.reduce((a, b) => a + b, 0);
   const odds = nums.filter(n => n % 2 !== 0).length;
   const lows = nums.filter(n => n <= cfg.lowMid).length;
@@ -219,7 +226,12 @@ function buildWhyBox(nums, cfg, sumMin, sumMax, overdueCount) {
   if (overdueCount) {
     reasons.push(`${overdueCount} overdue number${overdueCount > 1 ? 's' : ''} included`);
   }
-  reasons.push('Frequency-weighted within your filters');
+  const weightLabel = weightMode === 'cold'
+    ? 'Cold-weighted within your filters (favours least-frequent numbers)'
+    : weightMode === 'neutral'
+      ? 'Unweighted — random within your filters'
+      : 'Hot-weighted within your filters (favours most-frequent numbers)';
+  reasons.push(weightLabel);
   return '<strong>Criteria applied:</strong> ' + reasons.join(' · ');
 }
 
@@ -260,7 +272,7 @@ function renderSetCard(nums, cfg, setIndex, totalSets, sumMin, sumMax, overdueCo
   const _fi = window._lastFilters || {};
   const whyHtml = _sd
     ? explainGeneratedSet(nums, _sd, cfg, _fi)
-    : buildWhyBox(nums, cfg, sumMin, sumMax, overdueCount);
+    : buildWhyBox(nums, cfg, sumMin, sumMax, overdueCount, _fi.weightMode || 'hot');
 
   // For multiple sets, show a set label; for single, keep original layout
   const labelHtml = totalSets > 1
@@ -306,6 +318,15 @@ function generateNumbers() {
     const spreadEl   = document.getElementById('spreadFilter');
     const spreadPref = (spreadEl && !spreadEl.disabled) ? spreadEl.value : 'any';
 
+    // Weight mode — 'hot' (default/current behaviour), 'cold' (against the
+    // grain — favours least-frequent/overdue-adjacent numbers), or 'neutral'
+    // (no frequency bias at all). Falls back to 'hot' if the control doesn't
+    // exist on the page yet, or is disabled/locked for this member's tier —
+    // so this is a no-op change for any page that hasn't added the selector.
+    const weightModeEl = document.getElementById('weightMode');
+    const weightMode   = (weightModeEl && !weightModeEl.disabled) ? weightModeEl.value : 'hot';
+    const skewExponent = weightMode === 'neutral' ? 1 : 1.5;
+
     // Compute spread thresholds from full draw history
     const allDrawsFull   = allDrawsData[currentGame].map(r => parseRecord(r, cfg.numCols));
     const spreadHints    = computeSpreadHints(allDrawsFull);
@@ -330,9 +351,13 @@ function generateNumbers() {
       : null;
 
     // ── Build frequency-weighted pool ───────────────────────
+    // Sort direction is what actually implements hot vs. cold: generateOneSet's
+    // Math.pow(Math.random(), skewExponent) always biases toward LOW index, so
+    // whichever end of the frequency spectrum sits at index 0 is what gets favoured.
+    // 'neutral' mode uses skewExponent = 1 (uniform), so sort direction there is moot.
     const weights = Object.entries(activeFreq)
       .map(([n, f]) => ({ n: parseInt(n), f }))
-      .sort((a, b) => b.f - a.f);
+      .sort((a, b) => weightMode === 'cold' ? a.f - b.f : b.f - a.f);
 
     // ── Seed locked pool ────────────────────────────────────
     const lockedPool = new Set(selectedOverdue);
@@ -357,7 +382,7 @@ function generateNumbers() {
     window._lastStatsDraws = sliceByDataset(allDrawsFull, currentDataset);
     window._lastFilters    = {
       sumMin, sumMax, sumRangeBucket, oddEvenPref, lowHighPref, spreadPref,
-      overdueCount, neverAppeared,
+      overdueCount, neverAppeared, weightMode,
       topPair: topPairEl ? topPairEl.value : 'none',
       myNums:  loadMyNumbers().filter(n => n >= 0 && n <= cfg.maxNum),
     };
@@ -374,7 +399,7 @@ function generateNumbers() {
 
       while (!result && attempts < maxAttempts) {
         attempts++;
-        const candidate = generateOneSet(cfg, weights, lockedPool, sumMin, sumMax, oddEvenPref, lowHighPref, spreadPref, spreadNarrowMax, spreadWideMin, 1);
+        const candidate = generateOneSet(cfg, weights, lockedPool, sumMin, sumMax, oddEvenPref, lowHighPref, spreadPref, spreadNarrowMax, spreadWideMin, 1, skewExponent);
         if (!candidate) continue;
         if (neverAppeared && allDrawsParsed && !neverAppearedBefore(candidate, allDrawsParsed)) continue;
         result = candidate;
@@ -404,7 +429,7 @@ function generateNumbers() {
         // silently rendering an empty/broken set.
         const issues = diagnoseGenerationFailure(
           cfg, weights, lockedPool, sumMin, sumMax, oddEvenPref, lowHighPref,
-          spreadPref, spreadNarrowMax, spreadWideMin, neverAppeared
+          spreadPref, spreadNarrowMax, spreadWideMin, neverAppeared, skewExponent
         );
         resultBalls.innerHTML = '';
         document.getElementById('whyBox').innerHTML = `
@@ -433,7 +458,7 @@ function generateNumbers() {
         );
         const _filters = {
           sumMin, sumMax, sumRangeBucket, oddEvenPref, lowHighPref, spreadPref,
-          overdueCount, neverAppeared,
+          overdueCount, neverAppeared, weightMode,
           topPair: topPairEl ? topPairEl.value : 'none',
           myNums:  loadMyNumbers().filter(n => n >= 0 && n <= cfg.maxNum),
         };
@@ -478,7 +503,7 @@ function generateNumbers() {
       if (failed.length) {
         const issues = diagnoseGenerationFailure(
           cfg, weights, lockedPool, sumMin, sumMax, oddEvenPref, lowHighPref,
-          spreadPref, spreadNarrowMax, spreadWideMin, neverAppeared
+          spreadPref, spreadNarrowMax, spreadWideMin, neverAppeared, skewExponent
         );
         multiWrap.innerHTML += `
           <div class="gen-fail-notice">
