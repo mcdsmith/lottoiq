@@ -1,16 +1,17 @@
 // ============================================================
 // LottoIQ — main.js
 // Entry point. Loaded last, after all other JS files.
-// Auth runs first — page only renders if member is logged in.
+// Auth runs first — Standard content is public, so the page
+// renders for anonymous visitors too, with Insider-only
+// features left locked. initAuth() only returns null on a
+// genuine account error (session present but no profile row).
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
 
   // ── Auth gate ─────────────────────────────────────────────
-  // initAuth() redirects to /signin if not logged in.
-  // If it returns null, a redirect is already in progress.
   const memberData = await initAuth();
-  if (!memberData) return;
+  if (!memberData) return; // rare: broken session/profile — already redirected to /signin
 
   // ── Determine active game from URL ────────────────────────
   const path       = window.location.pathname;

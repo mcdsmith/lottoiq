@@ -133,3 +133,16 @@ nav {
 }
 
 .nav-manage:hover { color: var(--text); }
+
+/* Sign in link — shown to anonymous visitors in place of the
+   avatar/sign-out controls, which require a real session. */
+.nav-signin {
+  font-size:       13px;
+  font-weight:     600;
+  color:           var(--text-muted);
+  text-decoration: none;
+  transition:      color 0.15s;
+  white-space:     nowrap;
+}
+
+.nav-signin:hover { color: var(--text); }

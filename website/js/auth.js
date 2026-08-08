@@ -30,17 +30,20 @@ const SIGNIN_URL = '/signin';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 
-// ── Gate: redirect non-members ───────────────────────────────
-// Runs immediately on every /games/* page. If no session is
-// present, redirects to /signin with a return URL so the
-// member lands back on the correct page after login.
+// ── Gate: identify member, don't block visitors ────────────────
+// Runs immediately on every /games/* page. Standard-tier content
+// is free and public — no session required. If no session is
+// present, this returns an anonymous/Standard stub instead of
+// redirecting, so the page renders normally with Insider-only
+// features left locked. Pages that need Insider specifically
+// (e.g. /games/custom/) check memberData.tier themselves and
+// show their own upgrade prompt — see that page's inline script.
 
 async function enforceAuth() {
   const { data: { session }, error } = await sb.auth.getSession();
 
   if (error || !session) {
-    redirectToSignin();
-    return null;
+    return { id: null, email: null, tier: 'standard', firstName: null, anonymous: true };
   }
 
   // ── Return from Stripe checkout ─────────────────────────────
@@ -71,6 +74,7 @@ async function enforceAuth() {
     email:     session.user.email,
     tier:      profile.tier,
     firstName: profile.first_name,
+    anonymous: false,
   };
 }
 
@@ -110,9 +114,8 @@ async function waitForInsiderTier(userId, maxWaitMs = 8000, intervalMs = 1000) {
 // the data source (memberData) changed shape.
 
 function applyMemberUI(memberData) {
-  const tier    = memberData.tier;
-  const initial = (memberData.firstName || memberData.email.split('@')[0])
-                    .charAt(0).toUpperCase();
+  const tier        = memberData.tier;
+  const isAnonymous = !!memberData.anonymous;
 
   // ── Nav ────────────────────────────────────────────────────
   const badge = document.querySelector('.tier-badge');
@@ -121,8 +124,27 @@ function applyMemberUI(memberData) {
     badge.className   = `tier-badge ${tier}`;
   }
 
-  const avatar = document.querySelector('.nav-avatar');
-  if (avatar) avatar.textContent = initial;
+  // Sign-in link vs. avatar/sign-out — anonymous visitors (the
+  // common case now, since Standard needs no account) see a
+  // plain "Sign In" link; real sessions see their avatar.
+  const signinLink = document.querySelector('.nav-signin');
+  const avatar     = document.querySelector('.nav-avatar');
+  const logoutBtn  = document.getElementById('logoutBtn');
+
+  if (isAnonymous) {
+    if (signinLink) signinLink.style.display = '';
+    if (avatar)     avatar.style.display     = 'none';
+    if (logoutBtn)  logoutBtn.style.display  = 'none';
+  } else {
+    if (signinLink) signinLink.style.display = 'none';
+    if (logoutBtn)  logoutBtn.style.display  = '';
+    if (avatar) {
+      avatar.style.display = '';
+      const initial = (memberData.firstName || memberData.email.split('@')[0])
+                        .charAt(0).toUpperCase();
+      avatar.textContent = initial;
+    }
+  }
 
   const navUpgrade = document.querySelector('.nav-upgrade');
   if (navUpgrade && tier === 'insider') {
@@ -130,10 +152,11 @@ function applyMemberUI(memberData) {
   }
 
   // Manage Account (Stripe Billing Portal) — Insider only.
-  // Standard members have no Stripe customer to manage.
+  // Standard members (and anonymous visitors) have no Stripe
+  // customer to manage.
   const navManage = document.querySelector('.nav-manage');
   if (navManage) {
-    navManage.style.display = tier === 'insider' ? '' : 'none';
+    navManage.style.display = (tier === 'insider' && !isAnonymous) ? '' : 'none';
   }
 
   // ── Dataset selector ───────────────────────────────────────
