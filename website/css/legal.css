@@ -1,0 +1,179 @@
+/* ============================================================
+   LottoIQ — Legal Pages (Privacy Policy, Terms of Use)
+   Built on tokens.css. Shared by /privacy-policy/ and /terms-of-use/.
+   ============================================================ */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--navy);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px solid var(--gold-bd);
+}
+a:hover, a:focus-visible {
+  border-bottom-color: var(--gold);
+}
+a:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ---------- Nav ---------- */
+.site-nav {
+  background: var(--navy-2);
+  border-bottom: 1px solid var(--navy-4);
+}
+.site-nav .inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.site-nav .logo {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--text);
+  border-bottom: none;
+  letter-spacing: -0.01em;
+}
+.site-nav .logo span { color: var(--gold); }
+.site-nav .links {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+.site-nav .links a {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid transparent;
+}
+.site-nav .links a:hover, .site-nav .links a:focus-visible {
+  color: var(--text);
+  border-bottom-color: var(--gold);
+}
+
+/* ---------- Legal document body ---------- */
+.legal-wrap {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 64px 24px 96px;
+}
+.legal-wrap h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+}
+.legal-updated {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin: 0 0 40px;
+}
+.legal-intro {
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin: 0 0 48px;
+  font-size: 1.02rem;
+}
+.legal-section {
+  padding: 28px 0;
+  border-top: 1px solid var(--navy-3);
+}
+.legal-section:first-of-type { border-top: 1px solid var(--navy-4); }
+.legal-section h2 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 14px;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+.legal-section h2 .num {
+  font-family: var(--font-mono);
+  color: var(--gold);
+  font-size: 0.95rem;
+}
+.legal-section p, .legal-section li {
+  color: var(--text-muted);
+  line-height: 1.75;
+  font-size: 0.98rem;
+}
+.legal-section p { margin: 0 0 14px; }
+.legal-section ul, .legal-section ol {
+  margin: 0 0 14px;
+  padding-left: 22px;
+}
+.legal-section li { margin-bottom: 8px; }
+.legal-section h3 {
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 20px 0 10px;
+}
+.legal-section strong { color: var(--text); font-weight: 600; }
+
+.legal-contact {
+  margin-top: 40px;
+  padding: 24px;
+  background: var(--navy-2);
+  border: 1px solid var(--gold-bd);
+  border-radius: var(--radius);
+}
+.legal-contact p { margin: 0 0 6px; color: var(--text-muted); }
+.legal-contact p:last-child { margin-bottom: 0; }
+
+/* ---------- Footer ---------- */
+.site-footer {
+  border-top: 1px solid var(--navy-4);
+  background: var(--navy-2);
+}
+.site-footer .inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 32px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+}
+.site-footer .links {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+.site-footer a {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  border-bottom: none;
+}
+.site-footer a:hover, .site-footer a:focus-visible { color: var(--gold); }
+.site-footer .copyright {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 640px) {
+  .site-nav .links { gap: 16px; }
+  .legal-wrap { padding: 40px 20px 72px; }
+}
