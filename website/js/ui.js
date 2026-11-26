@@ -210,27 +210,6 @@ function initGenerator() {
 }
 
 
-// ── Upgrade CTAs ─────────────────────────────────────────────
-// All upgrade buttons call openUpgradeCheckout() from auth.js
-// which loads first and exposes the function globally.
-
-function initUpgradeCTAs() {
-  // Pairs gate upgrade button
-  document.getElementById('pairsUpgradeBtn')
-    ?.addEventListener('click', (e) => {
-      e.preventDefault();
-      openUpgradeCheckout(PRICE_MONTHLY);
-    });
-
-  // Upgrade banner CTA
-  document.getElementById('upgradeCtaBtn')
-    ?.addEventListener('click', (e) => {
-      e.preventDefault();
-      openUpgradeCheckout(PRICE_MONTHLY);
-    });
-}
-
-
 // ── Helper: game key → URL slug ──────────────────────────────
 
 function gameKeyToSlug(gameKey) {
@@ -473,5 +452,4 @@ function initUI() {
   initGameTabs();
   initDatasetSelector();
   initGenerator();
-  initUpgradeCTAs();
 }

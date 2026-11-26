@@ -17,7 +17,7 @@
   <!-- Styles -->
   <link rel="stylesheet" href="/css/tokens.css?v=20260808"/>
   <link rel="stylesheet" href="/css/base.css?v=20260808"/>
-  <link rel="stylesheet" href="/css/nav.css?v=20260808"/>
+  <link rel="stylesheet" href="/css/nav.css?v=20261126"/>
   <link rel="stylesheet" href="/css/game-tabs.css?v=20260808"/>
   <link rel="stylesheet" href="/css/hero.css?v=20260808"/>
   <link rel="stylesheet" href="/css/sections.css?v=20260808"/>
@@ -705,12 +705,12 @@
 
 
 <!-- Scripts -->
-<script src="/js/auth.js?v=20260808"></script>
+<script src="/js/auth.js?v=20261126"></script>
 <script src="/js/config.js?v=20260808"></script>
 <script src="/js/analytics.js?v=20260808"></script>
 <script src="/js/render.js?v=20260808"></script>
 <script src="/js/generator.js?v=20260808"></script>
-<script src="/js/ui.js?v=20260808"></script>
+<script src="/js/ui.js?v=20261126"></script>
 
 <script>
 // ============================================================
@@ -1184,7 +1184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       <div class="upload-screen">
         <div class="upload-title">Insider <span>Only</span></div>
         <p class="upload-sub">The custom lottery analyser is available to Insider members. Upgrade to access this feature and unlock all analytics tools.</p>
-        <button class="btn-upgrade" onclick="openUpgradeCheckout('${PRICE_MONTHLY}')">Upgrade to Insider →</button>
+        <button class="btn-upgrade" onclick="openPlanChooser()">Upgrade to Insider →</button>
       </div>`;
     return;
   }

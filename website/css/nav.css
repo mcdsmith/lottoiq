@@ -146,3 +146,69 @@ nav {
 }
 
 .nav-signin:hover { color: var(--text); }
+
+/* ── Plan chooser pop-up (opened from auth.js) ── */
+.plan-chooser {
+  margin: auto;
+  padding: 0;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  background: var(--navy-2);
+  color: var(--text);
+  border: 1px solid var(--navy-5);
+  border-radius: var(--radius-lg);
+}
+.plan-chooser::backdrop { background: rgba(0, 0, 0, 0.7); }
+.plan-chooser-box { position: relative; padding: 28px 24px 24px; }
+.plan-chooser h2 {
+  font-family: var(--font-display);
+  font-size: 19px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+.plan-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: none;
+  border: 0;
+  color: var(--text-muted);
+  font-size: 24px;
+  cursor: pointer;
+}
+.plan-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 22px 12px 18px;
+  background: var(--navy-3);
+  border: 1px solid var(--navy-5);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+.plan-card:hover, .plan-card:focus-visible { border-color: var(--gold); }
+.plan-best { border: 2px solid var(--gold); background: var(--gold-glow); }
+.plan-flag {
+  position: absolute;
+  top: -11px;
+  background: var(--gold);
+  color: var(--navy);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.plan-name { font-size: 13px; color: var(--text-muted); }
+.plan-price { font-family: var(--font-display); font-size: 28px; font-weight: 800; }
+.plan-period { font-size: 12px; color: var(--text-muted); }
+.plan-save { font-size: 12px; font-weight: 700; color: var(--gold); }
+
+@media (max-width: 420px) {
+  .plan-cards { grid-template-columns: 1fr; gap: 20px; }
+}

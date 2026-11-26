@@ -337,6 +337,10 @@
   // ── Mode toggle ───────────────────────────────────────────
   let currentMode = 'signin';
 
+  // Paid sign-ups continue to Stripe, so the button says so.
+  const PAID_PLAN    = ['monthly', 'yearly'].includes(new URLSearchParams(window.location.search).get('checkout'));
+  const SIGNUP_LABEL = PAID_PLAN ? 'Create Account & Continue' : 'Create Free Account';
+
   function setMode(mode) {
     currentMode = mode;
     hideAlert();
@@ -345,7 +349,7 @@
     document.getElementById('tabSignin').classList.toggle('active', mode === 'signin');
     document.getElementById('tabSignup').classList.toggle('active', mode === 'signup');
     document.getElementById('submitBtn').textContent =
-      mode === 'signin' ? 'Sign In' : 'Create Free Account';
+      mode === 'signin' ? 'Sign In' : SIGNUP_LABEL;
 
     const pw = document.getElementById('password');
     pw.autocomplete = mode === 'signin' ? 'current-password' : 'new-password';
@@ -371,7 +375,7 @@
     const badge = document.querySelector('.plan-badge');
     if (badge) {
       badge.innerHTML = checkoutParam === 'yearly'
-        ? '✓ <strong>Insider (Yearly)</strong> — $79.99/year, save $40'
+        ? '✓ <strong>Insider (Yearly)</strong> — $79.99/year, Save 33%'
         : '✓ <strong>Insider (Monthly)</strong> — $9.99/month';
     }
   }
@@ -434,7 +438,7 @@
           `Almost there — we've sent a confirmation link to ${email}. Click it to activate your account, then come back here to sign in.`,
           'success'
         );
-        btn.textContent = 'Create Free Account';
+        btn.textContent = SIGNUP_LABEL;
         btn.disabled    = false;
 
       } catch (err) {
@@ -443,7 +447,7 @@
           ? 'An account with this email already exists. Try signing in.'
           : 'Could not create account. Please try again.';
         showAlert(msg);
-        btn.textContent = 'Create Free Account';
+        btn.textContent = SIGNUP_LABEL;
         btn.disabled    = false;
       }
 

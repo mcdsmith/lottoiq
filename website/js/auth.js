@@ -82,9 +82,12 @@ async function enforceAuth() {
   };
 }
 
-function redirectToSignin() {
+// `plan` is optional. When given ('monthly' / 'yearly'), the signin
+// page carries it through so checkout opens after sign-in.
+function redirectToSignin(plan) {
   const returnTo = encodeURIComponent(window.location.pathname);
-  window.location.href = `${SIGNIN_URL}?return=${returnTo}`;
+  const checkout = plan ? `&checkout=${plan}` : '';
+  window.location.href = `${SIGNIN_URL}?return=${returnTo}${checkout}`;
 }
 
 
@@ -284,7 +287,7 @@ async function openUpgradeCheckout(interval) {
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) {
-      redirectToSignin();
+      redirectToSignin(interval);
       return;
     }
 
@@ -309,22 +312,72 @@ async function openUpgradeCheckout(interval) {
   }
 }
 
-function wireUpgradeButtons() {
-  const navUpgrade = document.querySelector('.nav-upgrade');
-  if (navUpgrade) {
-    navUpgrade.addEventListener('click', e => {
-      e.preventDefault();
-      openUpgradeCheckout(INTERVAL_MONTHLY);
+// ── Plan chooser (monthly / yearly) ──────────────────────────
+// One pop-up shared by every upgrade button and /upgrade link.
+
+function openPlanChooser() {
+  if (window.LottoIQTier === 'insider') return;
+
+  let dialog = document.getElementById('planChooser');
+  if (!dialog) {
+    dialog = document.createElement('dialog');
+    dialog.id = 'planChooser';
+    dialog.className = 'plan-chooser';
+    dialog.setAttribute('aria-labelledby', 'planChooserTitle');
+    dialog.innerHTML = `
+      <div class="plan-chooser-box">
+        <button type="button" class="plan-close" aria-label="Close">&times;</button>
+        <h2 id="planChooserTitle">Choose your Insider plan</h2>
+        <div class="plan-cards">
+          <button type="button" class="plan-card" data-plan="${INTERVAL_MONTHLY}">
+            <span class="plan-name">Monthly</span>
+            <span class="plan-price">$9.99</span>
+            <span class="plan-period">per month</span>
+          </button>
+          <button type="button" class="plan-card plan-best" data-plan="${INTERVAL_YEARLY}">
+            <span class="plan-flag">Best value</span>
+            <span class="plan-name">Yearly</span>
+            <span class="plan-price">$79.99</span>
+            <span class="plan-period">per year</span>
+            <span class="plan-save">Save 33%</span>
+          </button>
+        </div>
+      </div>`;
+
+    dialog.addEventListener('click', e => {
+      // A click on the dialog element itself is a backdrop click.
+      if (e.target === dialog || e.target.closest('.plan-close')) {
+        dialog.close();
+        return;
+      }
+      const card = e.target.closest('.plan-card');
+      if (card) {
+        dialog.close();
+        openUpgradeCheckout(card.dataset.plan);
+      }
     });
+
+    document.body.appendChild(dialog);
   }
 
-  const bannerBtn = document.getElementById('upgradeCtaBtn');
-  if (bannerBtn) {
-    bannerBtn.addEventListener('click', e => {
-      e.preventDefault();
-      openUpgradeCheckout(INTERVAL_MONTHLY);
-    });
-  }
+  if (!dialog.open) dialog.showModal();
+}
+
+let upgradeButtonsWired = false;
+
+function wireUpgradeButtons() {
+  if (upgradeButtonsWired) return;
+  upgradeButtonsWired = true;
+
+  // Delegated, so it also covers elements rendered after page load.
+  document.addEventListener('click', e => {
+    const trigger = e.target.closest(
+      '.nav-upgrade, #upgradeCtaBtn, #pairsUpgradeBtn, a[href="/upgrade"]'
+    );
+    if (!trigger) return;
+    e.preventDefault();
+    openPlanChooser();
+  });
 }
 
 
