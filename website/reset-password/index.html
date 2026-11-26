@@ -173,8 +173,10 @@
 </div>
 
 <script>
-  const SUPABASE_URL      = 'https://nnhvhqggaxfraqmkkehg.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_QkI9i4nwrYyctRemhsZJWw_lolAkKjK';
+  // Test Supabase project on localhost only; every deployed host uses LIVE.
+  const IS_LOCAL_PAGE     = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  const SUPABASE_URL      = IS_LOCAL_PAGE ? 'https://pgdyonarzopwgjxcfvch.supabase.co' : 'https://nnhvhqggaxfraqmkkehg.supabase.co';
+  const SUPABASE_ANON_KEY = IS_LOCAL_PAGE ? 'sb_publishable_9M2HHoeZ2MkDz463Vdx7Ig_PBS8eZ3s' : 'sb_publishable_QkI9i4nwrYyctRemhsZJWw_lolAkKjK';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const submitBtn = document.getElementById('submitBtn');

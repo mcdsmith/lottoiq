@@ -15,8 +15,12 @@
 // service_role key — never from this file.
 // ============================================================
 
-const SUPABASE_URL      = 'https://nnhvhqggaxfraqmkkehg.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_QkI9i4nwrYyctRemhsZJWw_lolAkKjK';
+// Use the test Supabase project only when running locally (netlify dev).
+// Any deployed hostname (stats.lottoiq.ca, previews, etc.) falls through to LIVE.
+const IS_LOCAL = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+const SUPABASE_URL      = IS_LOCAL ? 'https://pgdyonarzopwgjxcfvch.supabase.co'      : 'https://nnhvhqggaxfraqmkkehg.supabase.co';
+const SUPABASE_ANON_KEY = IS_LOCAL ? 'sb_publishable_9M2HHoeZ2MkDz463Vdx7Ig_PBS8eZ3s'  : 'sb_publishable_QkI9i4nwrYyctRemhsZJWw_lolAkKjK';
 
 // Billing interval keys — the actual Stripe Price IDs live only in the
 // create-checkout-session Netlify function's environment variables,

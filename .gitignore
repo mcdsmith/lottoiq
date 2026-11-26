@@ -2,3 +2,7 @@
 .netlify
 # Dependencies
 node_modules
+.env
+.env.*
+
+lotto_test.bat
