@@ -60,6 +60,29 @@
     display: none;
   }
 
+  /* Nav — tighter spacing so the controls fit on phones */
+  nav {
+    padding: 0 12px;
+  }
+
+  .nav-right {
+    gap: 8px;
+  }
+
+  /* Insider: drop the initial and shorten "Manage Account" */
+  .tier-badge.insider ~ .nav-avatar {
+    display: none;
+  }
+
+  .nav-manage {
+    font-size: 0;
+  }
+
+  .nav-manage::after {
+    content: "Account";
+    font-size: 13px;
+  }
+
   /* Hero title */
   .hero h1 {
     font-size: 26px;
