@@ -139,7 +139,11 @@ function applyMemberUI(memberData) {
   const logoutBtn  = document.getElementById('logoutBtn');
 
   if (isAnonymous) {
-    if (signinLink) signinLink.style.display = '';
+    if (signinLink) {
+      // Bring the visitor back to this page after signing in.
+      signinLink.href          = `${SIGNIN_URL}?return=${encodeURIComponent(window.location.pathname)}`;
+      signinLink.style.display = '';
+    }
     if (avatar)     avatar.style.display     = 'none';
     if (logoutBtn)  logoutBtn.style.display  = 'none';
   } else {
